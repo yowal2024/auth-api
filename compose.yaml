@@ -1,0 +1,71 @@
+name: auth-api-local
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: local_test_only
+      MYSQL_DATABASE: auth_api
+    ports:
+      - "127.0.0.1:18306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:18379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  app:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - app-data:/app/runtime
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/install/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis-test:
+    profiles: ["test"]
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:18380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    environment:
+      AUTH_RECOVERY_MYSQL_DSN: "root:local_test_only@tcp(mysql:3306)/"
+      AUTH_RECOVERY_REDIS_ADDR: redis-test:6379
+      AUTH_RECOVERY_REDIS_DISPOSABLE: "1"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+volumes:
+  mysql-data:
+  app-data:

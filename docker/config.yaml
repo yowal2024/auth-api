@@ -1,0 +1,24 @@
+installed: false
+server:
+  addr: :8080
+  mode: prod
+mysql:
+  dsn: ""
+  max_open: 30
+  max_idle: 10
+  conn_lifetime: 3600
+  table_prefix: a_
+redis:
+  addr: redis:6379
+  db: 0
+clone:
+  canonical_dir: ./uploads/canonical
+  output_dir: ./uploads/diffs
+  diff_ttl_sec: 60
+upload:
+  root: ./uploads
+  url_prefix: /uploads
+session:
+  ttl_sec: 604800
+web:
+  dist: ""
