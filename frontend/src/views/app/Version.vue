@@ -96,7 +96,7 @@ export default {
       return (
         appStore.current?.diffUpdate && n.push("差异更新"),
         appStore.current?.randomPackage && n.push("随机包名"),
-        `已开启 ${n.join(" / ")},下载地址会由服务端动态生成`
+        `已开启 ${n.join(" / ")}。APK 可暂不上传，之后编辑版本时补传；上传后才能提供 APK 下载及上述功能。`
       );
     });
     const loadingState = ref(false);
@@ -257,10 +257,6 @@ export default {
       }
     };
     const handleSaveVersion = async () => {
-      if (S.value && !formData.apkName) {
-        Message.warning("请上传 APK 文件");
-        return false;
-      }
       const n = {
         ...formData,
         versionNo: `${formData.major}.${formData.minor}.${formData.patch}`,
@@ -423,6 +419,9 @@ export default {
               <span :key="0">{{ t.originalPackage }}</span>
             </template>
             <template v-else></template>
+          </template>
+          <template v-else-if="S && !t.url">
+            <Tag color="gray" size="small">待上传 APK</Tag>
           </template>
           <template v-else>
             <Link
