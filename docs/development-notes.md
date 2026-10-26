@@ -6,7 +6,11 @@
 
 ### 本地 IP 经纬度库
 
-应用信息 → 开启“绑定 IP 区域” → “IP 经纬度服务”选择“本地 DB-IP”。超级管理员先点击“安装”，安装完成后保存应用设置；后续点击“更新”获取官方月度版本，无需 API KEY。普通管理员可以查看状态和版本，但不能更新全局数据库。安装状态和月度版本显示在原 KEY 输入框的位置，更新时显示下载进度及校验状态。腾讯、高德服务继续保留，不会自动切换已有应用。
+系统设置 → IP 定位服务：超级管理员统一选择本地 DB-IP、腾讯地图或高德地图。在线服务填写共用 KEY；本地 DB-IP 无需 KEY，先点击“安装”，完成后保存定位服务，后续点击“更新”获取官方月度版本。该页面显示本地库的安装状态、版本、更新进度及校验状态。应用信息保留“绑定 IP 区域”开关和各自的距离阈值，并提供系统配置入口。普通管理员不能访问系统配置或读取共用 KEY。
+
+迁移 `0047_system_geo.sql` 将已有的相同服务配置和 KEY 自动迁移到系统设置；比较 KEY 时区分大小写。若不同应用使用不同配置，则继续沿用各自设置，系统页面提示选择统一配置，并允许载入某个已有应用的 KEY。只有保存后才统一生效，不擅自替换现有应用的定位服务。没有已配置服务时默认使用本地 DB-IP；安装完成前仍不能开启本地地域绑定。
+
+系统定位配置保存后，下一次用户或卡密地域校验立即使用新配置，无需重启；各应用的绑定开关、距离限制、用户地点数上限及历史地点记录不变。旧应用字段 `geoProvider`、`geoKey` 继续保留用于升级兼容；一旦系统配置已统一，实际查询以系统配置为准，应用页保存不会修改共用服务。
 
 使用 [DB-IP City Lite](https://db-ip.com/db/download/ip-to-city-lite)，数据按 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 许可使用，署名 **IP Geolocation by DB-IP**；MMDB 读取使用开源 `maxminddb-golang`。覆盖中国及全球 IPv4/IPv6，提供区域估算经纬度；免费库不保证每个国内 IP 的市县精度，移动网络、公共 DNS、VPN 出口可能定位到其他地区。不可当作 GPS 使用。
 
@@ -14,7 +18,7 @@
 
 数据库保存在配置文件旁的 `data/geo/dbip-city-lite.mmdb`，可通过配置 `geo.local_dir` 指定目录；Docker 默认位于持久卷 `/app/runtime/data/geo`，不公开下载。更新期间保留新旧数据库，建议至少预留 512 MiB 内存和磁盘空间。本地查询不调用在线服务，也不读取旧 SQL 地理缓存，因此更新立即生效。
 
-前端测试：`npm run test:local-geo`。后端测试：`go test ./internal/geo ./internal/handler`；可设置 `AUTH_RECOVERY_GEO_FIXTURE` 为官方下载的 `.mmdb.gz` 路径验证实际数据。后台接口为 `GET /api/<入口>/geo/local`、`GET /api/<入口>/geo/local/lookup?ip=...`、`POST /api/<入口>/geo/local/update`，均需要管理员会话，更新还要求超级管理员。
+前端测试：`npm run test:local-geo`，覆盖系统配置的保存与失败保留、旧配置载入、下载进度、应用规则独立、权限和移动端布局。后端测试：`go test ./internal/geo ./internal/handler`；配置独立 MySQL 后，`TestGlobalGeoSettingsUpgrade` 验证旧 KEY 迁移及配置冲突，`TestRealDatabaseLifecycle` 验证保存后即时生效和单连接事务内的用户/卡密地域校验。可设置 `AUTH_RECOVERY_GEO_FIXTURE` 为官方下载的 `.mmdb.gz` 路径验证实际数据。系统配置接口为 `GET/POST /api/<入口>/system/geo`，仅超级管理员可访问；本地库接口为 `GET /api/<入口>/geo/local`、`GET /api/<入口>/geo/local/lookup?ip=...`、`POST /api/<入口>/geo/local/update`，均需要管理员会话，更新还要求超级管理员。
 
 更新已有实例后，正常启动或重启服务即可自动应用增量数据库迁移。`auth-api -config config.yaml -migrate` 保留为可选维护命令，只执行迁移检查并退出，不启动 HTTP/HTTPS 服务。
 

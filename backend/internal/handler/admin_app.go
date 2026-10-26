@@ -137,8 +137,7 @@ func (h *AdminAppHandler) Create(c *gin.Context) {
 	if !validApp(c, &v) {
 		return
 	}
-	if v.BindRegion && v.GeoProvider == geo.LocalProvider && !h.LocalGeo.Status().Ready {
-		response.BadRequest(c, "请先下载本地 IP 库，再启用本地地域绑定")
+	if !h.validateRegionService(c, &v) {
 		return
 	}
 	if r.InheritFrom <= 0 && v.Encryption != 0 {
@@ -174,8 +173,7 @@ func (h *AdminAppHandler) Update(c *gin.Context) {
 	if !validApp(c, v) {
 		return
 	}
-	if v.BindRegion && v.GeoProvider == geo.LocalProvider && !h.LocalGeo.Status().Ready {
-		response.BadRequest(c, "请先下载本地 IP 库，再启用本地地域绑定")
+	if !h.validateRegionService(c, v) {
 		return
 	}
 	if v.Encryption > 0 {

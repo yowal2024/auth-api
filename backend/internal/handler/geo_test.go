@@ -9,7 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 )
 
 func TestLocalGeoManagementPermissionAndErrors(t *testing.T) {
@@ -38,8 +40,14 @@ func TestLocalGeoManagementPermissionAndErrors(t *testing.T) {
 }
 
 func TestAppCannotEnableMissingLocalGeo(t *testing.T) {
+	raw, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer raw.Close()
+	mock.ExpectQuery("SELECT geo_provider,geo_key").WillReturnRows(sqlmock.NewRows([]string{"geo_provider", "geo_key"}).AddRow("dbip", ""))
 	g := gin.New()
-	h := NewAdminAppHandler(nil)
+	h := NewAdminAppHandler(repo.NewAppRepo(sqlx.NewDb(raw, "sqlmock")))
 	g.POST("/app", h.Create)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/app", bytes.NewBufferString(`{"name":"Test","type":"user","mode":"free","bindRegion":true,"geoProvider":"dbip"}`))
@@ -48,6 +56,9 @@ func TestAppCannotEnableMissingLocalGeo(t *testing.T) {
 	var result struct{ Code int }
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || result.Code != 400 {
 		t.Fatal(w.Body.String(), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -64,19 +75,37 @@ func TestGeoProviderValidation(t *testing.T) {
 
 func TestLocalRegionBindingFailsClosedWithoutDatabase(t *testing.T) {
 	for _, kami := range []bool{false, true} {
+		raw, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer raw.Close()
+		mock.ExpectBegin()
+		mock.ExpectQuery("SELECT geo_provider,geo_key").WillReturnRows(sqlmock.NewRows([]string{"geo_provider", "geo_key"}).AddRow("dbip", ""))
+		mock.ExpectRollback()
+		tx, err := sqlx.NewDb(raw, "sqlmock").Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Request = httptest.NewRequest("POST", "/api/sdk/logon", nil)
 		c.Request.RemoteAddr = "1.2.3.4:1234"
 		c.Set("sdkApp", &repo.App{ID: 1, BindRegion: true, GeoProvider: geo.LocalProvider})
 		service := &SDKService{}
-		// A nil transaction ensures the local branch does not query SQL cache or fall back online.
-		if service.checkRegionTx(c, &repo.User{ID: 1, AppID: 1}, kami, nil) {
+		// Only the global configuration is read: no SQL IP cache or online fallback.
+		if service.checkRegionTx(c, &repo.User{ID: 1, AppID: 1}, kami, tx) {
 			t.Fatal("missing local database bypassed region binding", kami)
 		}
 		var result struct{ Code int }
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || result.Code != 500 {
 			t.Fatal(w.Body.String(), err)
+		}
+		if err := tx.Rollback(); err != nil {
+			t.Fatal(err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Fatal(err)
 		}
 	}
 }

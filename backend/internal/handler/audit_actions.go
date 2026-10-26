@@ -59,6 +59,7 @@ func auditAction(method, route string) string {
 }
 
 var auditActions = map[string]string{
+	"POST /system/geo":          "修改了系统 IP 定位服务",
 	"DELETE /user/:id/sessions": "下线了用户全部会话", "DELETE /user/:id/sessions/:sessionId": "下线了用户单个会话",
 	"DELETE /kami/:id/sessions": "下线了卡密全部会话", "DELETE /kami/:id/sessions/:sessionId": "下线了卡密单个会话",
 	"POST /system/backup/settings": "修改了自动备份设置", "POST /system/backup/run": "创建了备份",

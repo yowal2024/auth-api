@@ -2,7 +2,8 @@
 <script>
 import { reportError } from "@/utils/errors.js";
 import { useAppStore } from "@/stores/app.js";
-import LocalGeo from "@/components/LocalGeo.vue";
+import { useRouter } from "vue-router";
+import { entryPath } from "@/utils/route.js";
 import {
   listEncryptions,
   getMTLS,
@@ -21,7 +22,6 @@ import {
   Select,
   Switch,
   Message,
-  InputPassword,
   Popconfirm,
   Button,
   Modal,
@@ -43,7 +43,6 @@ import {
 export default {
   name: "AppInfo",
   components: {
-    LocalGeo,
     Upload,
     IconCamera,
     Tag,
@@ -57,7 +56,6 @@ export default {
     Option,
     InputNumber,
     Switch,
-    InputPassword,
     Popconfirm,
     Button,
     IconSafe,
@@ -68,6 +66,9 @@ export default {
     IconSave,
   },
   setup(Et) {
+    const router = useRouter();
+    const openGeoSettings = () =>
+      router.push({ path: entryPath("/system"), query: { tab: "geo" } });
     const appStore = useAppStore();
     const loadingState2 = ref(false);
     const P = ref([]);
@@ -85,8 +86,6 @@ export default {
       encryption: null,
       tokenTtlValue: 7,
       tokenTtlUnit: "d",
-      geoProvider: "dbip",
-      geoKey: "",
       ipDistanceMax: 50,
       bruteForceEnabled: false,
       mtlsEnabled: false,
@@ -161,8 +160,6 @@ export default {
         encryption: a.encryption || null,
         tokenTtlValue: e.value,
         tokenTtlUnit: e.unit,
-        geoProvider: a.geoProvider || "dbip",
-        geoKey: a.geoKey || "",
         ipDistanceMax: a.ipDistanceMax || 50,
         bruteForceEnabled: !!a.bruteForceEnabled,
         mtlsEnabled: !!a.mtlsEnabled,
@@ -238,7 +235,7 @@ export default {
     const handleClick6 = () => h(v.key, `app-${formData.id}-key.pem`);
     const handleClick3 = () => {
       formData.bindRegion ||
-        Message.info('需要先开启"绑定IP区域"才能配置 IP 经纬度服务');
+        Message.info('需要先开启"绑定IP区域"才能设置距离阈值');
     };
     const handleUploadAppLogo = async (a, e) => {
       const c = e?.file;
@@ -280,8 +277,6 @@ export default {
           randomPackage: formData.randomPackage,
           encryption: formData.encryption,
           userTokenTtl: j(formData.tokenTtlValue, formData.tokenTtlUnit),
-          geoProvider: formData.geoProvider,
-          geoKey: formData.geoKey,
           ipDistanceMax: formData.ipDistanceMax,
           bruteForceEnabled: formData.bruteForceEnabled,
           mtlsEnabled: formData.mtlsEnabled,
@@ -308,6 +303,7 @@ export default {
       handleGetMTLS();
     });
     return {
+      openGeoSettings,
       appStore,
       loadingState2,
       P,
@@ -503,10 +499,12 @@ export default {
             @click="handleClick3"
           >
             <div class="switch-meta">
-              <div class="switch-title">IP 经纬度服务</div>
+              <div class="switch-title">IP 地点距离阈值</div>
               <div class="switch-desc">
-                IP → 经纬度的在线服务或本地 IP 库
-                与默认距离阈值;仅在&quot;绑定IP区域&quot;开启时生效
+                小于此距离视为同一地点，仅在绑定 IP 区域开启时生效。
+                <Button type="text" size="mini" @click.stop="openGeoSettings">
+                  配置系统定位服务
+                </Button>
               </div>
             </div>
             <div
@@ -517,30 +515,6 @@ export default {
                 },
               ]"
             >
-              <Select
-                v-model="formData.geoProvider"
-                class="geo-provider"
-                :disabled="!formData.bindRegion"
-              >
-                <template #default>
-                    <Option value="dbip">本地 DB-IP</Option>
-                  <Option value="tencent"
-                    ><template #default>腾讯地图</template></Option
-                  >
-                  <Option value="amap"
-                    ><template #default>高德地图</template></Option
-                  >
-                </template>
-              </Select>
-              <InputPassword
-                  v-if="formData.geoProvider !== 'dbip'"
-                v-model="formData.geoKey"
-                class="geo-key"
-                placeholder="对应平台的应用 KEY"
-                allow-clear=""
-                :disabled="!formData.bindRegion"
-              ></InputPassword>
-              <LocalGeo v-if="formData.geoProvider === 'dbip'" class="geo-key" />
               <InputNumber
                 v-model="formData.ipDistanceMax"
                 :min="1"
@@ -860,14 +834,6 @@ export default {
   gap: 6px;
   flex: 0 0 auto;
 }
-.geo-row .geo-provider {
-  width: 120px;
-  flex: 0 0 120px;
-}
-.geo-row .geo-key {
-  width: 320px;
-  flex: 0 0 320px;
-}
 .geo-row .geo-distance {
   width: 120px;
   flex: 0 0 120px;
@@ -1013,19 +979,6 @@ export default {
   .geo-row {
     width: 100%;
     flex-wrap: wrap;
-  }
-  .geo-row .geo-provider {
-    flex: 0 0 100px;
-    width: 100px;
-  }
-  .geo-row .geo-key {
-    flex: 1 1 0;
-    width: auto;
-    min-width: 0;
-  }
-  .geo-row .local-geo.geo-key {
-    flex: 1 1 100%;
-    order: 3;
   }
   .geo-row .geo-distance {
     flex: 0 0 100px;

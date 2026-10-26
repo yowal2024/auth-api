@@ -239,13 +239,18 @@ func (s *SDKService) checkRegionTx(c *gin.Context, u *repo.User, kami bool, tx *
 	if !app.BindRegion {
 		return true
 	}
+	settings, err := repo.LoadGeoSettings(c.Request.Context(), tx)
+	if dbError(c, err) {
+		return false
+	}
+	settings = settings.ForApp(app)
 	var point geo.Point
 	var e error
-	if app.GeoProvider == geo.LocalProvider {
+	if settings.Provider == geo.LocalProvider {
 		// Local lookups are fast and must immediately use the newly installed database.
 		point, e = s.LocalGeo.Lookup(c.ClientIP())
 	} else {
-		point, e = geo.Resolve(c.Request.Context(), tx, app.GeoProvider, app.GeoKey, c.ClientIP())
+		point, e = geo.Resolve(c.Request.Context(), tx, settings.Provider, settings.Key, c.ClientIP())
 	}
 	if e != nil {
 		response.ServerError(c, "地域查询失败")

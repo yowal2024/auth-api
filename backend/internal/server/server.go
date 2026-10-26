@@ -158,6 +158,7 @@ func New(o Options) (*gin.Engine, error) {
 		handler.MountAdmins(super, admins, sessions)
 		handler.MountSecurityEvents(super, o.DB)
 		handler.MountBackup(super, o.Backup)
+		handler.MountGeoSettings(super, o.DB, o.LocalGeo)
 		super.GET("/system/settings", func(c *gin.Context) { response.OK(c, settings.Snapshot()) })
 		handler.MountSystem(super, o.DB, settings, o.OnChange)
 		handler.MountCertificates(admin, super, o.DB, o.OnTLS)

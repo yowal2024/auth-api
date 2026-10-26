@@ -90,7 +90,7 @@ func TestApplicationNumbersUpgradeAndConcurrency(t *testing.T) {
 	exec("INSERT INTO {logs} (id,type,data) VALUES (5,'admin','not-json'),(6,'admin','{}')")
 	m.Files = migrations.Files
 	applied, err := m.Run(ctx)
-	if err != nil || len(applied) != 2 {
+	if err != nil || len(applied) != 3 {
 		t.Fatalf("upgrade: %v %v", applied, err)
 	}
 	var scopes []int64

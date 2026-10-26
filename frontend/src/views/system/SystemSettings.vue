@@ -2,6 +2,7 @@
 <script>
 import BackupSettings from "@/components/BackupSettings.vue";
 import SecurityEvents from "@/components/SecurityEvents.vue";
+import GeoSettings from "@/components/GeoSettings.vue";
 import { reportError } from "@/utils/errors.js";
 import { keepModalOpen } from "@/utils/modal.js";
 import { usePagedList } from "@/composables/usePagedList.js";
@@ -64,7 +65,9 @@ import { entryPath } from "@/utils/route.js";
 export default {
   name: "SystemSettings",
   components: {
-BackupSettings,SecurityEvents,
+    BackupSettings,
+    SecurityEvents,
+    GeoSettings,
     Breadcrumb,
     BreadcrumbItem,
     Tabs,
@@ -99,7 +102,9 @@ BackupSettings,SecurityEvents,
   },
   setup(Ea) {
     const router = useRouter();
-    const D = ref("settings");
+    const D = ref(
+      router.currentRoute.value.query.tab === "geo" ? "geo" : "settings",
+    );
     const formData = reactive({
       webUrl: "",
       uploadLimit: 10,
@@ -801,6 +806,9 @@ BackupSettings,SecurityEvents,
             </template>
           </TabPane>
           <TabPane key="backup" title="自动备份"><BackupSettings v-if="D === 'backup'" /></TabPane>
+          <TabPane key="geo" title="IP 定位服务">
+            <GeoSettings v-if="D === 'geo'" />
+          </TabPane>
 <TabPane key="security" title="安全事件"><SecurityEvents v-if="D === 'security'" /></TabPane>
 <TabPane key="https" title="HTTPS / 双向认证">
             <template #default>

@@ -66,7 +66,7 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	if e != nil {
 		t.Fatalf("migrations: %v", e)
 	}
-	if len(applied) != 46 {
+	if len(applied) != 47 {
 		t.Fatalf("migrations=%d", len(applied))
 	}
 	if again, e := m.Run(context.Background()); e != nil || len(again) != 0 {
@@ -177,6 +177,9 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	t.Run("ApplicationRecordNumbersAndIsolation", func(t *testing.T) {
 		testApplicationRecordAPIs(t, wrapper, adminToken)
 	})
+	t.Run("SystemGeoServiceAndApplicationRules", func(t *testing.T) {
+		testSystemGeoAPI(t, d, adminToken, request)
+	})
 	t.Run("OrdinaryAdminOperationsAndConfigurationBoundary", func(t *testing.T) {
 		created := ok(request("POST", "/api/admin/admin", map[string]any{"username": "operator1", "password": "test-pass-123", "role": "admin"}, adminToken, false)).(map[string]any)
 		id := created["id"].(float64)
@@ -197,7 +200,7 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 			{"POST", fmt.Sprintf("/app/%d/mtls/issue-cert", appID)}, {"POST", fmt.Sprintf("/app/%d/mtls/gen-ca", appID)},
 			{"GET", "/encrypt/list"}, {"POST", "/encrypt"}, {"POST", "/extend"}, {"GET", "/extend-file/list"},
 			{"POST", "/extend-file/upload"}, {"GET", "/ver/list"}, {"POST", "/function/0/run"},
-			{"GET", "/system/settings"}, {"GET", "/admin/list"}, {"GET", "/log/list"}, {"POST", "/log/clear"},
+			{"GET", "/system/settings"}, {"GET", "/system/geo"}, {"POST", "/system/geo"}, {"GET", "/admin/list"}, {"GET", "/log/list"}, {"POST", "/log/clear"},
 		} {
 			if v := request(endpoint.method, "/api/admin"+endpoint.path, map[string]any{}, operatorToken, false); v["code"] != float64(403) {
 				t.Fatal("configuration accessible", endpoint, v)
@@ -651,7 +654,7 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	if out := request("POST", "/api/sdk/logon", map[string]any{"card": cards[0], "mi": "test-device"}, "", true); out["code"] != float64(2002) {
 		t.Fatal("consumed topup card accepted as account", out)
 	}
-	if _, e = d.Exec(repo.SQL("UPDATE {apps} SET bind_region=1,geo_provider='tencent',geo_key='' WHERE id=?"), appID); e != nil {
+	if _, e = d.Exec(repo.SQL("UPDATE {apps} SET bind_region=1,geo_provider='amap',geo_key='legacy-app-key' WHERE id=?"), appID); e != nil {
 		t.Fatal(e)
 	}
 	if v := request("POST", "/api/sdk/logon", map[string]any{"card": cards[1], "mi": "test-device"}, "", true); v["code"] == float64(0) {
@@ -661,6 +664,8 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	if e = d.Get(&cardStatus, repo.SQL("SELECT status FROM {kamis} WHERE appid=? AND card=?"), appID, cards[1]); e != nil || cardStatus != 0 {
 		t.Fatalf("failed geo consumed card: %d %v", cardStatus, e)
 	}
+	// Saving the global service takes effect immediately, overriding the app's old provider/key.
+	ok(request("POST", "/api/admin/system/geo", map[string]any{"provider": "tencent", "key": "global-test-key"}, adminToken, false))
 	// A single SQL connection must suffice while geo resolution runs inside activation.
 	d.SetMaxOpenConns(1)
 	d.SetMaxIdleConns(1)
