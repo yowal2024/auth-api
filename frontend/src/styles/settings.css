@@ -1,0 +1,229 @@
+.settings-surface,
+.settings-dialog {
+  --border-radius-small: 0;
+  --border-radius-medium: 0;
+  --border-radius-large: 0;
+}
+.settings-surface .settings-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0 24px;
+}
+.settings-surface .settings-heading-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary-light-1);
+  color: rgb(var(--primary-6));
+  font-size: 23px;
+}
+.settings-surface .settings-heading-copy {
+  flex: 1;
+  min-width: 0;
+}
+.settings-surface .settings-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+.settings-surface .settings-heading p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text-3);
+}
+.settings-surface .settings-heading-note {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+.settings-surface .settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.settings-surface .settings-span-all {
+  grid-column: 1 / -1;
+}
+.settings-surface .settings-panel,
+.settings-surface .settings-table-panel {
+  min-width: 0;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-bg-2);
+}
+.settings-surface .settings-panel-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--color-border-2);
+  background: var(--color-fill-1);
+}
+.settings-surface .settings-panel-heading h3,
+.settings-surface .settings-aside h3 {
+  margin: 0;
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.settings-surface .settings-panel-heading > svg {
+  font-size: 17px;
+  color: var(--color-text-2);
+}
+.settings-surface .settings-panel-heading > span {
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+.settings-surface .settings-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 24px;
+  padding: 22px 20px;
+}
+.settings-surface .settings-fields-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.settings-surface .settings-fields .arco-form-item {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.settings-surface .arco-input-number {
+  width: 100%;
+}
+.settings-surface .arco-input-wrapper,
+.settings-surface .arco-select-view-single,
+.settings-surface .arco-btn:not(.arco-btn-size-mini) {
+  min-height: 36px;
+  border-radius: 0;
+}
+.settings-surface .settings-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-1);
+  margin-top: 20px;
+}
+.settings-surface .settings-actions > span {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--color-text-3);
+}
+.settings-surface .settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+.settings-surface .settings-aside {
+  padding: 22px 24px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-1);
+}
+.settings-surface .settings-aside section + section {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border-2);
+}
+.settings-surface .settings-aside p {
+  margin: 8px 0 0;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.settings-surface .settings-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 0;
+  border-bottom: 1px solid var(--color-border-2);
+}
+.settings-surface .settings-toolbar .grow {
+  flex: 1;
+}
+.settings-surface .settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 20px;
+  background: var(--color-fill-1);
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.settings-surface .settings-note > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-size: 15px;
+}
+.settings-surface .settings-table-panel .arco-table-container {
+  border: 0;
+  border-radius: 0;
+}
+.settings-surface .settings-table-panel .arco-table-th {
+  font-weight: 500;
+}
+.settings-surface .settings-table-panel .arco-table-th .arco-table-cell {
+  padding: 13px 16px;
+}
+.settings-surface .settings-table-panel .arco-table-td .arco-table-cell {
+  padding: 14px 16px;
+}
+.settings-surface .settings-table-panel .arco-table-pagination {
+  margin: 16px 20px;
+}
+@media (max-width: 1100px) {
+  .settings-surface .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .settings-surface .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .settings-surface .settings-heading {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .settings-surface .settings-heading-note {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .settings-surface .settings-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 18px 16px;
+  }
+  .settings-surface .settings-panel-heading,
+  .settings-surface .settings-actions,
+  .settings-surface .settings-toolbar,
+  .settings-surface .settings-note,
+  .settings-surface .settings-aside {
+    padding: 14px 16px;
+  }
+  .settings-surface .settings-actions > span {
+    flex-basis: 100%;
+  }
+  .settings-surface .settings-toolbar .grow {
+    display: none;
+  }
+}

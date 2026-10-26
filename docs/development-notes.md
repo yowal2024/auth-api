@@ -20,6 +20,10 @@
 
 定位服务页面通过三张服务卡片选择提供方，支持键盘切换；不同提供方的 KEY 草稿分别保留。配置概览显示已成功读取或保存的设置，修改中的选项标记为“待保存”，保存失败不会改变概览。宽屏使用配置与说明双栏，窄屏自动纵向排列，并适配深色主题。
 
+系统设置的八个标签页和个人中心统一使用直角面板、表单控件与按钮，通过 `SettingsHeader.vue` 和 `styles/settings.css` 共享标题与分区样式。样式限定在 `settings-surface` 内，弹窗使用 `settings-dialog`，不影响其他页面。本地 IP 库的版本和最近更新时间直接展示，说明通过紧邻状态的信息按钮点击展开，也支持 Enter 与 Esc，不再由整条状态栏触发。
+
+个人中心分为头像与身份、基本资料、账号安全三个区域。昵称和账号需点击保存或按 Enter 提交；失焦保留草稿，取消或 Esc 放弃编辑。头像上传保留其他资料字段，修改密码仍在成功后退出当前会话。
+
 前端测试：`npm run test:local-geo`，覆盖系统配置的保存与失败保留、配置读取失败与重试、服务卡片键盘操作及 KEY 草稿隔离、保存状态与概览、旧配置载入、下载进度、应用规则独立、权限和移动端布局。设置 `TEST_SCREENSHOT_DIR` 可输出宽屏、手机及深色主题截图。后端测试：`go test ./internal/geo ./internal/handler`；配置独立 MySQL 后，`TestGlobalGeoSettingsUpgrade` 验证旧 KEY 迁移及配置冲突，`TestRealDatabaseLifecycle` 验证保存后即时生效和单连接事务内的用户/卡密地域校验。可设置 `AUTH_RECOVERY_GEO_FIXTURE` 为官方下载的 `.mmdb.gz` 路径验证实际数据。系统配置接口为 `GET/POST /api/<入口>/system/geo`，仅超级管理员可访问；本地库接口为 `GET /api/<入口>/geo/local`、`GET /api/<入口>/geo/local/lookup?ip=...`、`POST /api/<入口>/geo/local/update`，均需要管理员会话，更新还要求超级管理员。
 
 更新已有实例后，正常启动或重启服务即可自动应用增量数据库迁移。`auth-api -config config.yaml -migrate` 保留为可选维护命令，只执行迁移检查并退出，不启动 HTTP/HTTPS 服务。

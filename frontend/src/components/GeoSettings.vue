@@ -12,7 +12,6 @@ import {
   Space,
 } from "@arco-design/web-vue";
 import {
-  IconApps,
   IconInfoCircle,
   IconLocation,
   IconLock,
@@ -21,6 +20,7 @@ import {
   IconStorage,
   IconSync,
 } from "@arco-design/web-vue/es/icon";
+import SettingsHeader from "@/components/SettingsHeader.vue";
 import LocalGeo from "@/components/LocalGeo.vue";
 import { request } from "@/utils/request.js";
 import { reportError } from "@/utils/errors.js";
@@ -36,7 +36,7 @@ export default {
     Select,
     Space,
     LocalGeo,
-    IconApps,
+    SettingsHeader,
     IconInfoCircle,
     IconLocation,
     IconLock,
@@ -169,18 +169,12 @@ export default {
 
 <template>
   <section class="geo-settings">
-    <header class="geo-heading">
-      <div class="geo-heading-main">
-        <span class="geo-heading-icon"
-          ><IconLocation aria-hidden="true"
-        /></span>
-        <div>
-          <h2>IP 定位服务</h2>
-          <p>统一管理定位来源，为应用的 IP 区域校验提供支持。</p>
-        </div>
-      </div>
-      <span class="geo-scope"><IconApps aria-hidden="true" />系统级配置</span>
-    </header>
+    <SettingsHeader
+      title="IP 定位服务"
+      description="统一管理定位来源，为应用的 IP 区域校验提供支持。"
+      note="系统级配置"
+      ><IconLocation
+    /></SettingsHeader>
     <Alert v-if="legacyApps.length" type="warning" class="geo-notice">
       现有应用使用不同的定位配置，目前继续沿用各自配置。选择并保存后，所有应用将使用统一的服务。
     </Alert>
@@ -343,55 +337,6 @@ export default {
 </template>
 
 <style scoped>
-.geo-settings {
-  padding: 12px 0 4px;
-}
-.geo-heading,
-.geo-heading-main,
-.geo-panel-heading {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.geo-heading {
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-.geo-heading-icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--color-primary-light-1);
-  color: rgb(var(--primary-6));
-  font-size: 24px;
-}
-.geo-heading h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-.geo-heading p,
-.geo-panel-heading p {
-  margin: 5px 0 0;
-  color: var(--color-text-3);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.geo-scope {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: var(--color-text-2);
-  background: var(--color-fill-2);
-  font-size: 12px;
-}
 .geo-notice {
   margin-bottom: 20px;
 }
@@ -404,7 +349,7 @@ export default {
 .geo-guide {
   min-width: 0;
   border: 1px solid var(--color-border-2);
-  border-radius: 10px;
+  border-radius: 0;
 }
 .geo-config-panel {
   display: flex;
@@ -412,8 +357,17 @@ export default {
   overflow: hidden;
 }
 .geo-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   justify-content: space-between;
   padding: 22px 24px 0;
+}
+.geo-panel-heading p {
+  margin: 5px 0 0;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 1.6;
 }
 .geo-settings h3 {
   margin: 0;
@@ -427,7 +381,7 @@ export default {
   gap: 6px;
   flex-shrink: 0;
   padding: 4px 9px;
-  border-radius: 5px;
+  border-radius: 0;
   background: var(--color-fill-2);
   color: var(--color-text-3);
   font-size: 12px;
@@ -485,7 +439,7 @@ export default {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -525,7 +479,7 @@ export default {
   width: 32px;
   height: 32px;
   margin-bottom: 4px;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--color-fill-2);
   color: var(--color-text-2);
   font-size: 20px;
@@ -550,7 +504,7 @@ export default {
 }
 .geo-form-fields :deep(.arco-input-wrapper) {
   min-height: 40px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 .geo-form-actions {
   display: flex;
@@ -564,7 +518,7 @@ export default {
 .geo-form-actions :deep(.arco-btn) {
   flex-shrink: 0;
   height: 36px;
-  border-radius: 6px;
+  border-radius: 0;
 }
 .geo-form-actions > span,
 .geo-empty-hint {
@@ -580,15 +534,6 @@ export default {
 }
 .system-local-geo {
   width: 100%;
-  height: auto;
-  min-height: 40px;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-.system-local-geo :deep(.local-geo-status) {
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  white-space: normal;
 }
 .geo-guide {
   padding: 24px;
@@ -670,16 +615,6 @@ export default {
   }
 }
 @media (max-width: 600px) {
-  .geo-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 18px;
-  }
-  .geo-heading-main {
-    align-items: flex-start;
-    gap: 10px;
-  }
   .geo-panel-heading,
   .geo-form-fields,
   .geo-form-actions,

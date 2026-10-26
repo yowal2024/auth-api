@@ -16,9 +16,15 @@ import {
 } from "@arco-design/web-vue";
 import { request } from "@/utils/request.js";
 import { formatDateTime } from "@/utils/format.js";
+import SettingsHeader from "@/components/SettingsHeader.vue";
+import { IconStorage, IconSave, IconSync } from "@arco-design/web-vue/es/icon";
 export default {
   name: "BackupSettings",
   components: {
+    SettingsHeader,
+    IconStorage,
+    IconSave,
+    IconSync,
     Form,
     FormItem,
     Switch,
@@ -147,10 +153,16 @@ export default {
 </script>
 <template>
   <div class="backup-settings">
+    <SettingsHeader
+      title="自动备份"
+      description="设置备份周期与保留策略，管理和下载备份记录。"
+      note="本地备份"
+      ><IconStorage
+    /></SettingsHeader>
     <section class="backup-policy">
       <div class="policy-heading">
         <div class="policy-title">
-          <span class="section-title">自动备份</span>
+          <span class="section-title">备份策略</span>
           <Switch
             v-model="form.enabled"
             :disabled="!loaded"
@@ -164,7 +176,7 @@ export default {
           :loading="saving"
           :disabled="!loaded"
           @click="save"
-          >保存备份设置</Button
+          ><template #icon><IconSave /></template>保存备份设置</Button
         >
       </div>
       <Form :model="form" layout="vertical" class="backup-form">
@@ -212,66 +224,69 @@ export default {
         >
       </div>
     </section>
-    <div class="records-heading">
-      <div class="records-title">
-        <span class="section-title">备份记录</span
-        ><span class="policy-caption">按已保存的配置执行</span>
+    <section class="settings-table-panel">
+      <div class="records-heading settings-toolbar">
+        <div class="records-title">
+          <span class="section-title">备份记录</span
+          ><span class="policy-caption">按已保存的配置执行</span>
+        </div>
+        <Space :size="8"
+          ><Button :loading="fetching" @click="load()"
+            ><template #icon><IconSync /></template>刷新</Button
+          ><Popconfirm content="按已保存的配置立即备份？" @ok="run"
+            ><Button
+              type="outline"
+              :loading="starting"
+              :disabled="!loaded || rows.some((r) => r.status === 'running')"
+              >立即备份</Button
+            ></Popconfirm
+          ></Space
+        >
       </div>
-      <Space :size="8"
-        ><Button :loading="fetching" @click="load()">刷新</Button
-        ><Popconfirm content="按已保存的配置立即备份？" @ok="run"
+      <Table
+        :data="rows"
+        :columns="columns"
+        row-key="id"
+        :scroll="{ x: 760 }"
+        :bordered="false"
+        size="medium"
+        :pagination="rows.length > 10 ? { pageSize: 10 } : false"
+      >
+        <template #startedAt="{ record }">{{
+          formatDateTime(record.startedAt)
+        }}</template>
+        <template #finishedAt="{ record }">{{
+          record.finishedAt ? formatDateTime(record.finishedAt) : "—"
+        }}</template>
+        <template #status="{ record }"
+          ><Tag
+            :color="
+              record.status === 'complete'
+                ? 'green'
+                : record.status === 'failed'
+                  ? 'red'
+                  : 'blue'
+            "
+            >{{ labels[record.status] || record.status }}</Tag
+          ><Tooltip v-if="record.error" :content="record.error"
+            ><Button type="text" size="mini">原因</Button></Tooltip
+          ></template
+        >
+        <template #size="{ record }">{{
+          record.size ? (record.size / 1048576).toFixed(2) + " MB" : "—"
+        }}</template>
+        <template #actions="{ record }"
           ><Button
-            type="outline"
-            :loading="starting"
-            :disabled="!loaded || rows.some((r) => r.status === 'running')"
-            >立即备份</Button
-          ></Popconfirm
-        ></Space
-      >
-    </div>
-    <Table
-      :data="rows"
-      :columns="columns"
-      row-key="id"
-      :scroll="{ x: 760 }"
-      :bordered="false"
-      size="medium"
-      :pagination="rows.length > 10 ? { pageSize: 10 } : false"
-    >
-      <template #startedAt="{ record }">{{
-        formatDateTime(record.startedAt)
-      }}</template>
-      <template #finishedAt="{ record }">{{
-        record.finishedAt ? formatDateTime(record.finishedAt) : "—"
-      }}</template>
-      <template #status="{ record }"
-        ><Tag
-          :color="
-            record.status === 'complete'
-              ? 'green'
-              : record.status === 'failed'
-                ? 'red'
-                : 'blue'
-          "
-          >{{ labels[record.status] || record.status }}</Tag
-        ><Tooltip v-if="record.error" :content="record.error"
-          ><Button type="text" size="mini">原因</Button></Tooltip
-        ></template
-      >
-      <template #size="{ record }">{{
-        record.size ? (record.size / 1048576).toFixed(2) + " MB" : "—"
-      }}</template>
-      <template #actions="{ record }"
-        ><Button
-          v-if="record.status === 'complete'"
-          type="text"
-          :loading="downloading === record.id"
-          :disabled="!!downloading"
-          @click="download(record.id)"
-          >下载</Button
-        ></template
-      >
-    </Table>
+            v-if="record.status === 'complete'"
+            type="text"
+            :loading="downloading === record.id"
+            :disabled="!!downloading"
+            @click="download(record.id)"
+            >下载</Button
+          ></template
+        >
+      </Table>
+    </section>
   </div>
 </template>
 <style scoped>
@@ -280,7 +295,7 @@ export default {
 }
 .backup-policy {
   border: 1px solid var(--color-border-2);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   margin-bottom: 24px;
 }
@@ -331,7 +346,7 @@ export default {
   box-sizing: border-box;
   padding: 5px 12px;
   background: var(--color-fill-2);
-  border-radius: var(--border-radius-small);
+  border-radius: 0;
   font-size: 13px;
 }
 .backup-content :deep(.arco-checkbox) {
@@ -363,7 +378,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 .backup-settings :deep(.arco-table-th),
 .backup-settings :deep(.arco-table-td) {

@@ -137,6 +137,28 @@ try {
   );
   await panel.locator(".local-geo-status").hover();
   await page.getByText("库版本：2026-10", { exact: true }).waitFor();
+  assert.equal(
+    await page
+      .getByRole("link", { name: "IP Geolocation by DB-IP" })
+      .isVisible(),
+    false,
+  );
+  const info = panel.getByRole("button", {
+    name: "本地 IP 库说明",
+    exact: true,
+  });
+  await info.click();
+  await page.getByRole("link", { name: "IP Geolocation by DB-IP" }).waitFor();
+  const infoBox = await info.boundingBox();
+  const popupBox = await page
+    .locator(".arco-popover-popup-content:visible")
+    .boundingBox();
+  assert.ok(
+    Math.abs(popupBox.x - infoBox.x) < 40,
+    "database help must be anchored to the small info button",
+  );
+  assert.equal(await info.getAttribute("aria-expanded"), "true");
+  await info.press("Escape");
   await page.mouse.move(0, 0);
   assert.equal(await panel.locator("input").count(), 0);
   assert.equal(
@@ -150,13 +172,26 @@ try {
     await panel.screenshot({
       path: process.env.TEST_SCREENSHOT_DIR + "/geo-installed.png",
     });
-    await panel.locator(".local-geo-status").hover();
-    await page.getByText("库版本：2026-10", { exact: true }).waitFor();
+    await info.click();
+    await page.getByRole("link", { name: "IP Geolocation by DB-IP" }).waitFor();
     await page.screenshot({
       path: process.env.TEST_SCREENSHOT_DIR + "/geo-tooltip.png",
+      fullPage: true,
+      animations: "disabled",
     });
     await page.mouse.move(0, 0);
+    await info.press("Escape");
   }
+  await info.focus();
+  await info.press("Enter");
+  await page.getByRole("link", { name: "IP Geolocation by DB-IP" }).waitFor();
+  await info.press("Escape");
+  await page
+    .getByRole("link", { name: "IP Geolocation by DB-IP" })
+    .waitFor({ state: "hidden" });
+  checks.push(
+    "database version and update time are inline; help stays beside its button and supports click, Enter and Escape",
+  );
   fail = true;
   await panel.getByRole("button", { name: "更新", exact: true }).click();
   await page.getByText("测试更新失败", { exact: true }).waitFor();

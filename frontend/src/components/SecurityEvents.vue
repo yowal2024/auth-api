@@ -1,18 +1,27 @@
 <script>
 import { ref, onMounted } from "vue";
+import { Table, Button, Input, Select, Option } from "@arco-design/web-vue";
+import SettingsHeader from "@/components/SettingsHeader.vue";
 import {
-  Table,
-  Button,
-  Input,
-  Select,
-  Option,
-  Space,
-} from "@arco-design/web-vue";
+  IconSafe,
+  IconSearch,
+  IconInfoCircle,
+} from "@arco-design/web-vue/es/icon";
 import { request } from "@/utils/request.js";
 import { formatDateTime } from "@/utils/format.js";
 export default {
   name: "SecurityEvents",
-  components: { Table, Button, Input, Select, Option, Space },
+  components: {
+    Table,
+    Button,
+    Input,
+    Select,
+    Option,
+    SettingsHeader,
+    IconSafe,
+    IconSearch,
+    IconInfoCircle,
+  },
   setup() {
     const rows = ref([]),
       total = ref(0),
@@ -65,51 +74,72 @@ export default {
 };
 </script>
 <template>
-  <div>
-    <Space wrap class="security-tools"
-      ><Select
-        v-model="kind"
-        placeholder="事件类型"
-        allow-clear
-        style="width: 180px"
-        ><Option v-for="(label, value) in kinds" :key="value" :value="value">{{
-          label
-        }}</Option></Select
-      ><Input
-        v-model="ip"
-        placeholder="来源 IP"
-        style="width: 200px"
-        allow-clear
-        @press-enter="load()"
-      /><Button type="primary" :loading="loading" @click="load()"
-        >查询</Button
-      ></Space
-    >
-    <p class="security-hint">
-      保留最近 30
-      天；相同应用、IP、接口和事件类型每分钟记录一次，避免异常流量刷满日志。
-    </p>
-    <Table
-      :data="rows"
-      :columns="columns"
-      row-key="id"
-      :loading="loading"
-      :scroll="{ x: 850 }"
-      :pagination="{ total, current: page, pageSize: 20 }"
-      @page-change="load"
-      ><template #time="{ record }">{{
-        formatDateTime(record.createTime)
-      }}</template></Table
-    >
+  <div class="security-events">
+    <SettingsHeader
+      title="安全事件"
+      description="查看登录失败、限流和异常访问，按事件类型或来源 IP 检索。"
+      note="保留最近 30 天"
+      ><IconSafe
+    /></SettingsHeader>
+    <section class="settings-table-panel">
+      <div class="security-tools settings-toolbar">
+        <Select
+          v-model="kind"
+          placeholder="事件类型"
+          aria-label="事件类型"
+          allow-clear
+          style="width: 180px"
+          ><Option
+            v-for="(label, value) in kinds"
+            :key="value"
+            :value="value"
+            >{{ label }}</Option
+          ></Select
+        ><Input
+          v-model="ip"
+          placeholder="来源 IP"
+          aria-label="来源 IP"
+          style="width: 200px"
+          allow-clear
+          @press-enter="load()"
+        /><Button type="primary" :loading="loading" @click="load()"
+          ><template #icon><IconSearch /></template>查询</Button
+        ><span class="security-total">共 {{ total }} 条记录</span>
+      </div>
+      <p class="settings-note">
+        <IconInfoCircle />
+        保留最近 30
+        天；相同应用、IP、接口和事件类型每分钟记录一次，避免异常流量刷满日志。
+      </p>
+      <Table
+        :data="rows"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        :bordered="false"
+        :scroll="{ x: 850 }"
+        :pagination="{ total, current: page, pageSize: 20 }"
+        @page-change="load"
+        ><template #time="{ record }">{{
+          formatDateTime(record.createTime)
+        }}</template></Table
+      >
+    </section>
   </div>
 </template>
 <style scoped>
 .security-tools {
-  margin-bottom: 8px;
+  gap: 12px;
 }
-.security-hint {
+.security-total {
+  margin-left: auto;
   color: var(--color-text-3);
   font-size: 12px;
-  margin-bottom: 16px;
+}
+@media (max-width: 600px) {
+  .security-tools :deep(.arco-select),
+  .security-tools :deep(.arco-input-wrapper) {
+    width: 100% !important;
+  }
 }
 </style>

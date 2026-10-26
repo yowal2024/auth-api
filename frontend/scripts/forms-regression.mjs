@@ -17,6 +17,7 @@ const calls = {
   export: 0,
   profile: 0,
   upload: 0,
+  avatar: 0,
 };
 const fail = {
   password: true,
@@ -25,7 +26,10 @@ const fail = {
   export: true,
   profile: true,
 };
-let releaseReward, releaseUpload;
+let releaseReward, releaseUpload, profileSaved;
+const avatarPNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==";
+const avatarURL = "data:image/png;base64," + avatarPNG;
 async function waitForMock(ready) {
   const deadline = Date.now() + 5000;
   while (!ready()) {
@@ -65,13 +69,17 @@ try {
     }[`${req.method()} ${path}`];
     if (path === "/install/status")
       data = { code: 0, data: { installed: true, adminEntry: "admin" } };
-    else if (
+    else if (path === "/admin/upload/avatar") {
+      calls.avatar++;
+      data = { code: 0, data: { url: avatarURL } };
+    } else if (
       path === "/admin/extend-file/list" ||
       path === "/admin/extend-file/categories"
     )
       data = { code: 0, data: [] };
     else if (action) {
       calls[action]++;
+      if (action === "profile") profileSaved = body;
       if (action === "reward")
         await new Promise((resolve) => {
           releaseReward = resolve;
@@ -166,13 +174,11 @@ try {
 
   await page.goto("http://127.0.0.1:18184/admin/extend-file");
   await page.getByRole("button", { name: /上传文件/ }).click();
-  await modal
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "config.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("test"),
-    });
+  await modal.locator('input[type="file"]').setInputFiles({
+    name: "config.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("test"),
+  });
   await modal.getByRole("button", { name: "上传", exact: true }).click();
   await waitForMock(() => releaseUpload);
   assert.equal(
@@ -211,8 +217,15 @@ try {
     .locator(".row")
     .filter({ has: page.locator(".label", { hasText: "昵称" }) });
   await nicknameRow.locator(".editable").click();
+  await nicknameRow.locator("input").fill("discarded-name");
+  await nicknameRow.getByRole("button", { name: "取消", exact: true }).click();
+  assert.equal(calls.profile, 0);
+  await nicknameRow.locator(".editable").click();
   await nicknameRow.locator("input").fill("updated-name");
-  await nicknameRow.locator("input").press("Enter");
+  await page.locator(".profile-shell .settings-heading h2").click();
+  assert.equal(calls.profile, 0);
+  assert.equal(await nicknameRow.locator("input").inputValue(), "updated-name");
+  await nicknameRow.getByRole("button", { name: "保存", exact: true }).click();
   await page.getByText("profile rejected", { exact: true }).waitFor();
   assert.equal(await nicknameRow.locator("input").inputValue(), "updated-name");
   fail.profile = false;
@@ -223,7 +236,44 @@ try {
     .waitFor();
   assert.equal(calls.profile, 2);
   checks.push(
-    "profile failure retains editable value; Enter and blur do not duplicate saves",
+    "profile editing uses explicit Save or Enter; cancel discards drafts, blur preserves them, and failed saves retain input",
+  );
+
+  const chooseAvatar = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "更换头像", exact: true }).click();
+  await (
+    await chooseAvatar
+  ).setFiles({
+    name: "avatar.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(avatarPNG, "base64"),
+  });
+  await page.getByText("头像已更新", { exact: true }).waitFor();
+  assert.equal(calls.avatar, 1);
+  assert.equal(profileSaved.nickname, "updated-name");
+  assert.equal(profileSaved.username, "admin");
+  assert.equal(
+    await page.locator(".profile-identity img").getAttribute("src"),
+    avatarURL,
+  );
+  const usernameRow = page
+    .locator(".row")
+    .filter({ has: page.locator(".label", { hasText: "账号" }) });
+  await usernameRow
+    .getByRole("button", { name: "修改账号", exact: true })
+    .click();
+  const beforeUsername = calls.profile;
+  await usernameRow.locator("input").fill("a");
+  await usernameRow.getByRole("button", { name: "保存", exact: true }).click();
+  await page.getByText("账号长度需在 5-12 字节", { exact: true }).waitFor();
+  assert.equal(calls.profile, beforeUsername);
+  await usernameRow.locator("input").fill("new-admin");
+  await usernameRow.getByRole("button", { name: "保存", exact: true }).click();
+  await usernameRow.getByText("new-admin", { exact: true }).waitFor();
+  assert.equal(profileSaved.avatar, avatarURL);
+  assert.equal(profileSaved.nickname, "updated-name");
+  checks.push(
+    "avatar picker uploads and preserves profile fields; username edits validate and retain avatar and nickname",
   );
 
   await page
