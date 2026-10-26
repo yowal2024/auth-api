@@ -28,6 +28,7 @@ try {
     saved;
   let systemSaved,
     failSave = false,
+    failRead = false,
     systemReads = 0;
   let systemConfig = { provider: "dbip", key: "", legacyApps: [] };
   let releaseDownload,
@@ -71,7 +72,8 @@ try {
       out.data = saved;
     } else if (path === "/admin/system/geo" && req.method() === "GET") {
       systemReads++;
-      out.data = systemConfig;
+      if (failRead) out = { code: 500, msg: "测试读取失败" };
+      else out.data = systemConfig;
     } else if (path === "/admin/system/geo" && req.method() === "POST") {
       if (failSave) out = { code: 500, msg: "测试保存失败" };
       else {
@@ -162,18 +164,40 @@ try {
   await page.getByRole("button", { name: "保存定位服务", exact: true }).click();
   await page.getByText("已保存，所有应用立即生效", { exact: true }).waitFor();
   assert.deepEqual(systemSaved, { provider: "dbip", key: "" });
-  await page.locator(".geo-settings .arco-select").click();
+  await page.getByRole("radio", { name: "腾讯地图", exact: true }).check();
   await page
-    .locator(".arco-select-option")
-    .getByText("腾讯地图", { exact: true })
-    .click();
+    .locator(".geo-state")
+    .getByText("待保存", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page.locator(".geo-current-name").innerText(),
+    "本地 DB-IP",
+  );
   const keyInput = page.getByPlaceholder("对应平台的应用 KEY");
   await keyInput.fill("new-system-key");
+  await page.getByRole("radio", { name: "高德地图", exact: true }).check();
+  assert.equal(await keyInput.inputValue(), "");
+  await keyInput.fill("amap-draft-key");
+  await page
+    .getByRole("radio", { name: "高德地图", exact: true })
+    .press("ArrowLeft");
+  assert.equal(
+    await page
+      .getByRole("radio", { name: "腾讯地图", exact: true })
+      .isChecked(),
+    true,
+  );
+  assert.equal(await keyInput.inputValue(), "new-system-key");
   failSave = true;
   await page.getByRole("button", { name: "保存定位服务", exact: true }).click();
   await page.getByText("测试保存失败", { exact: true }).waitFor();
   assert.equal(await keyInput.inputValue(), "new-system-key");
   assert.equal(systemConfig.provider, "dbip");
+  assert.equal(
+    await page.locator(".geo-current-name").innerText(),
+    "本地 DB-IP",
+  );
+  assert.equal(await page.locator(".geo-state").innerText(), "待保存");
   failSave = false;
   const saveTencent = page.waitForResponse(
     (response) =>
@@ -182,17 +206,38 @@ try {
   );
   await page.getByRole("button", { name: "保存定位服务", exact: true }).click();
   await saveTencent;
+  await page
+    .locator(".geo-state")
+    .getByText("已保存", { exact: true })
+    .waitFor();
+  assert.equal(await page.locator(".geo-current-name").innerText(), "腾讯地图");
   assert.deepEqual(systemSaved, { provider: "tencent", key: "new-system-key" });
   await page.reload();
   await keyInput.waitFor();
   assert.equal(await keyInput.inputValue(), "new-system-key");
-  if (process.env.TEST_SCREENSHOT_DIR)
+  if (process.env.TEST_SCREENSHOT_DIR) {
     await page.screenshot({
       path: process.env.TEST_SCREENSHOT_DIR + "/system-geo-settings.png",
       fullPage: true,
+      animations: "disabled",
     });
+    await page.setViewportSize({ width: 2048, height: 1100 });
+    await page.screenshot({
+      path: process.env.TEST_SCREENSHOT_DIR + "/system-geo-wide.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.evaluate(() => document.body.setAttribute("arco-theme", "dark"));
+    await page.screenshot({
+      path: process.env.TEST_SCREENSHOT_DIR + "/system-geo-dark.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.evaluate(() => document.body.removeAttribute("arco-theme"));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
   checks.push(
-    "global provider and KEY persist; failed saves keep the form and active configuration",
+    "provider cards support keyboard selection and separate KEY drafts; saved status and overview update only after a successful save",
   );
 
   systemConfig = {
@@ -235,6 +280,55 @@ try {
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
+  );
+  if (process.env.TEST_SCREENSHOT_DIR) {
+    await page.locator(".arco-message").first().waitFor({ state: "hidden" });
+    await page.screenshot({
+      path: process.env.TEST_SCREENSHOT_DIR + "/system-geo-mobile.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  }
+  await page.getByRole("radio", { name: "本地 DB-IP", exact: true }).check();
+  await panel.getByText("已安装", { exact: true }).waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  );
+  if (process.env.TEST_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: process.env.TEST_SCREENSHOT_DIR + "/system-geo-mobile-local.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+  failRead = true;
+  await page.reload();
+  await page
+    .locator(".geo-state")
+    .getByText("读取失败", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("radio", { name: "腾讯地图", exact: true })
+      .isDisabled(),
+    true,
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: "保存定位服务", exact: true })
+      .isDisabled(),
+    true,
+  );
+  failRead = false;
+  await page.getByRole("button", { name: "重试加载", exact: true }).click();
+  await page
+    .locator(".geo-state")
+    .getByText("已保存", { exact: true })
+    .waitFor();
+  assert.equal(await page.locator(".geo-current-name").innerText(), "腾讯地图");
+  checks.push(
+    "failed loads disable editing and saving; retry restores the saved overview",
   );
   await page.goto("http://127.0.0.1:18189/private/app-info");
   await page.getByText("IP 地点距离阈值", { exact: true }).waitFor();
