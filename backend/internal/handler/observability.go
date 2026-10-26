@@ -30,6 +30,10 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 		}
 		args := []any{}
 		where := "1=1"
+		if category == "admin" && c.Query("type") != "system" {
+			where = "l.type='admin' AND l.appid=?"
+			args = append(args, max(c.GetInt64("appid"), 0))
+		}
 		if v := c.Query("type"); v != "" {
 			where += " AND l.type=?"
 			args = append(args, v)
@@ -91,7 +95,7 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 			}
 		} else {
 			v := []repo.Log{}
-			q := "SELECT l.id,l.type,l.action,COALESCE(l.data,'') AS data,l.target,l.operator,l.uid,l.ip,l.region,l.username,l.nickname,l.avatar,l.create_time FROM {logs} l WHERE " + where + " ORDER BY l.id DESC LIMIT ? OFFSET ?"
+			q := "SELECT l.id,l.appid,l.type,l.action,COALESCE(l.data,'') AS data,l.target,l.operator,l.uid,l.ip,l.region,l.username,l.nickname,l.avatar,l.create_time FROM {logs} l WHERE " + where + " ORDER BY l.id DESC LIMIT ? OFFSET ?"
 			if !dbError(c, d.SelectContext(c.Request.Context(), &v, repo.SQL(q), args...)) {
 				for i := range v {
 					if v[i].Type == "admin" || v[i].Type == "system" {
@@ -122,6 +126,11 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 			table = "user_logs"
 			where += " AND (uid IN (SELECT id FROM {users} WHERE appid=?) OR uid IN (SELECT -id FROM {kamis} WHERE appid=?))"
 			args = append(args, c.GetInt64("appid"), c.GetInt64("appid"))
+		} else if c.Query("type") == "system" {
+			where = "type='system'"
+		} else {
+			where = "type='admin' AND appid=?"
+			args = append(args, max(c.GetInt64("appid"), 0))
 		}
 		v := []string{}
 		if !dbError(c, d.SelectContext(c.Request.Context(), &v, repo.SQL("SELECT DISTINCT action FROM {"+table+"} WHERE "+where+" ORDER BY action"), args...)) {
@@ -155,6 +164,9 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 			}
 			q += " AND (uid IN (SELECT id FROM {users} WHERE appid=?) OR uid IN (SELECT -id FROM {kamis} WHERE appid=?))"
 			args = append(args, c.GetInt64("appid"), c.GetInt64("appid"))
+		} else if v.Type != "system" {
+			q += " AND type='admin' AND appid=?"
+			args = append(args, max(c.GetInt64("appid"), 0))
 		}
 		if len(v.IDs) > 0 {
 			q += " AND id IN (?)"
@@ -252,8 +264,8 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 			Type     string `db:"type"`
 			Data     string `db:"data"`
 		}{}
-		// The original dashboard merges application user events with global
-		// administrator events. Admin logs are also visible in /log/list.
+		// Both kinds of activity belong to the selected application. Unassigned
+		// historical and global administrator events stay in the global scope.
 		if a > 0 {
 			q := "SELECT COALESCE(u.username,k.card,'') AS username,l.action,COALESCE(l.data,'') AS data,l.create_time,'primary' AS type FROM {user_logs} l LEFT JOIN {users} u ON u.id=l.uid LEFT JOIN {kamis} k ON -k.id=l.uid WHERE (u.appid=? OR k.appid=?) ORDER BY l.create_time DESC,l.id DESC LIMIT 8"
 			if dbError(c, d.SelectContext(c.Request.Context(), &recent, repo.SQL(q), a, a)) {
@@ -261,9 +273,9 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 			}
 		}
 		adminRecent := recent[:0:0]
-		q := "SELECT COALESCE(NULLIF(operator,''),'管理员') AS username,action,COALESCE(data,'') AS data,create_time,'success' AS type FROM {logs} WHERE type='admin' ORDER BY create_time DESC,id DESC LIMIT 8"
+		q := "SELECT COALESCE(NULLIF(operator,''),'管理员') AS username,action,COALESCE(data,'') AS data,create_time,'success' AS type FROM {logs} WHERE type='admin' AND appid=? ORDER BY create_time DESC,id DESC LIMIT 8"
 		if actor := middleware.CurrentAdmin(c); actor != nil && actor.Role == "super" {
-			if dbError(c, d.SelectContext(c.Request.Context(), &adminRecent, repo.SQL(q))) {
+			if dbError(c, d.SelectContext(c.Request.Context(), &adminRecent, repo.SQL(q), max(a, 0))) {
 				return
 			}
 		}
@@ -282,7 +294,7 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 		if !ok {
 			return
 		}
-		q := "SELECT id,username,nickname,vip,ban_expire,create_time FROM {users} WHERE appid=?"
+		q := "SELECT " + repo.AppRecordIDColumn("users", "{users}") + "id,username,nickname,vip,ban_expire,create_time FROM {users} WHERE appid=?"
 		args := []any{a}
 		switch c.DefaultQuery("scope", "all") {
 		case "all":
@@ -314,10 +326,10 @@ func MountObservability(g *gin.RouterGroup, d *sqlx.DB, r *redis.Client) {
 		if format == "txt" {
 			writer.Comma = '\t'
 		}
-		writer.Write([]string{"ID", "账号", "昵称", "VIP到期", "封禁到期", "注册时间"})
+		writer.Write([]string{"应用内编号", "系统 ID", "账号", "昵称", "VIP到期", "封禁到期", "注册时间"})
 
 		for _, u := range v {
-			writer.Write([]string{strconv.FormatInt(u.ID, 10), spreadsheetSafe(u.Username), spreadsheetSafe(u.Nickname), strconv.FormatInt(u.Vip, 10), strconv.FormatInt(u.BanExpire, 10), strconv.FormatInt(u.CreateTime, 10)})
+			writer.Write([]string{strconv.FormatInt(u.AppRecordID, 10), strconv.FormatInt(u.ID, 10), spreadsheetSafe(u.Username), spreadsheetSafe(u.Nickname), strconv.FormatInt(u.Vip, 10), strconv.FormatInt(u.BanExpire, 10), strconv.FormatInt(u.CreateTime, 10)})
 		}
 		writer.Flush()
 	})
@@ -340,7 +352,8 @@ func AdminAudit(d *sqlx.DB) gin.HandlerFunc {
 		if enabled == 0 && !system {
 			return
 		}
-		details := gin.H{"httpStatus": c.Writer.Status(), "method": c.Request.Method, "route": c.FullPath(), "appId": c.GetInt64("appid")}
+		appID := auditAppID(c)
+		details := gin.H{"httpStatus": c.Writer.Status(), "method": c.Request.Method, "route": c.FullPath(), "appId": appID}
 		if code, exists := c.Get(response.CodeContextKey); exists {
 			details["code"] = code
 			details["success"] = code == 0 && c.Writer.Status() < 400 && !c.GetBool("audit.executionFailed") && !c.GetBool("audit.hotSwapFailed")
@@ -351,7 +364,7 @@ func AdminAudit(d *sqlx.DB) gin.HandlerFunc {
 		}
 		data, _ := json.Marshal(details)
 		write := func(kind string) {
-			_, e := d.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {logs} (type,action,data,target,operator,uid,ip,region,username,nickname,avatar,create_time) VALUES ('"+kind+"',?,?,?,?,?,?,'',?,?,?,?)"), action, string(data), c.Param("id"), a.Username, a.AdminID, c.ClientIP(), a.Username, a.Nickname, a.Avatar, time.Now().Unix())
+			_, e := d.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {logs} (type,appid,action,data,target,operator,uid,ip,region,username,nickname,avatar,create_time) VALUES ('"+kind+"',?,?,?,?,?,?,?,'',?,?,?,?)"), appID, action, string(data), c.Param("id"), a.Username, a.AdminID, c.ClientIP(), a.Username, a.Nickname, a.Avatar, time.Now().Unix())
 			if e != nil {
 				c.Error(e)
 			}

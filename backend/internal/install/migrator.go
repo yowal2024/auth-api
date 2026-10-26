@@ -184,7 +184,7 @@ func (m Migrator) Run(ctx context.Context) ([]string, error) {
 }
 
 func migrationReplacer(prefix string) *strings.Replacer {
-	tables := []string{"admins", "apps", "users", "user_extends", "user_devices", "user_logs", "notices", "extends", "versions", "blocks", "kami_groups", "kamis", "functions", "encrypts", "logs", "settings", "api_routes", "api_codes", "user_groups", "ip_info", "extend_files", "security_events", "backup_settings", "backup_runs"}
+	tables := []string{"admins", "apps", "users", "user_extends", "user_devices", "user_logs", "notices", "extends", "versions", "blocks", "kami_groups", "kamis", "functions", "encrypts", "logs", "settings", "api_routes", "api_codes", "user_groups", "ip_info", "extend_files", "security_events", "backup_settings", "backup_runs", "app_record_ids", "app_record_counters"}
 	pairs := []string{}
 	for _, table := range tables {
 		pairs = append(pairs, "{"+table+"}", prefix+table)

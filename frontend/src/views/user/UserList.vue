@@ -91,12 +91,13 @@ export default {
     });
     const H = computed(() =>
       u.searchField === "fuzzy"
-        ? "账号 / 昵称 / ID 模糊匹配"
+        ? "账号 / 昵称 / 系统 ID 模糊匹配"
         : `请输入用户${
             {
               username: "账号",
               nickname: "昵称",
-              id: "ID",
+              id: "系统 ID",
+              appRecordId: "应用内编号",
             }[u.searchField] || "账号"
           }`,
     );
@@ -235,9 +236,9 @@ export default {
     };
     const tableColumns = [
       {
-        title: "ID",
-        dataIndex: "id",
-        width: 70,
+        title: "应用内编号",
+        dataIndex: "appRecordId",
+        width: 110,
       },
       {
         title: "账号",
@@ -474,7 +475,8 @@ export default {
                     <Option value="nickname"
                       ><template #default>昵称</template></Option
                     >
-                    <Option value="id"><template #default>ID</template></Option>
+                    <Option value="appRecordId"><template #default>应用内编号</template></Option>
+                    <Option value="id"><template #default>系统 ID</template></Option>
                   </template>
                 </Select>
                 <Input

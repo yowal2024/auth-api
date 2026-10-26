@@ -159,7 +159,7 @@ func (f *FileService) Save(c *gin.Context, dir string, max int64, imageOnly bool
 	return
 }
 
-const fileSelect = "SELECT id,appid,name,filename,filepath,filesize,filetype,category,remark,version,download_url,download_count,created_at,updated_at FROM {extend_files}"
+var fileSelect = "SELECT " + repo.AppRecordIDColumn("extend_files", "{extend_files}") + "id,appid,name,filename,filepath,filesize,filetype,category,remark,version,download_url,download_count,created_at,updated_at FROM {extend_files}"
 
 // Open once and reject directories; never sniff HTML/JSON as an API response.
 func serveDownload(c *gin.Context, path, name string) {
@@ -287,7 +287,7 @@ func (f *FileService) Mount(admin *gin.RouterGroup) {
 			return
 		}
 		v := []string{}
-		e := f.DB.SelectContext(c.Request.Context(), &v, repo.SQL("SELECT DISTINCT category FROM {extend_files} WHERE (appid=? OR appid=0) AND category<>'' ORDER BY category"), a)
+		e := f.DB.SelectContext(c.Request.Context(), &v, repo.SQL("SELECT DISTINCT category FROM {extend_files} WHERE appid=? AND category<>'' ORDER BY category"), a)
 		if !dbError(c, e) {
 			response.OK(c, v)
 		}
@@ -323,7 +323,7 @@ func (f *FileService) Mount(admin *gin.RouterGroup) {
 			display = name
 		}
 		now := time.Now().Unix()
-		result, e := f.DB.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {extend_files} (appid,name,filename,filepath,filesize,filetype,category,remark,version,download_url,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"), a, display, name, path, size, mime, c.PostForm("category"), c.PostForm("remark"), c.PostForm("version"), url, now, now)
+		result, e := repo.ExecAppInsert(c.Request.Context(), f.DB, a, "extend_files", repo.SQL("INSERT INTO {extend_files} (appid,name,filename,filepath,filesize,filetype,category,remark,version,download_url,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"), a, display, name, path, size, mime, c.PostForm("category"), c.PostForm("remark"), c.PostForm("version"), url, now, now)
 		if e != nil {
 			os.Remove(path)
 			dbError(c, e)
@@ -404,7 +404,7 @@ func (f *FileService) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	q := fileSelect + " WHERE (appid=? OR appid=0)"
+	q := fileSelect + " WHERE appid=?"
 	args := []any{a}
 	if category := c.Query("category"); category != "" {
 		q += " AND category=?"
@@ -435,7 +435,7 @@ func (f *FileService) Download(c *gin.Context) {
 		return
 	}
 	var v repo.ExtendFile
-	err := f.DB.GetContext(c.Request.Context(), &v, repo.SQL(fileSelect+" WHERE id=? AND (appid=? OR appid=0)"), id, a)
+	err := f.DB.GetContext(c.Request.Context(), &v, repo.SQL(fileSelect+" WHERE id=? AND appid=?"), id, a)
 	if errors.Is(err, sql.ErrNoRows) {
 		response.Fail(c, 404, "文件不存在")
 		return

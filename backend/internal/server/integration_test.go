@@ -66,7 +66,7 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	if e != nil {
 		t.Fatalf("migrations: %v", e)
 	}
-	if len(applied) != 44 {
+	if len(applied) != 46 {
 		t.Fatalf("migrations=%d", len(applied))
 	}
 	if again, e := m.Run(context.Background()); e != nil || len(again) != 0 {
@@ -174,6 +174,9 @@ func TestRealDatabaseLifecycle(t *testing.T) {
 	app := ok(request("POST", "/api/admin/app", map[string]any{"name": "Integration", "type": "user", "mode": "free", "bindDevice": true}, adminToken, false)).(map[string]any)
 	appID = int64(app["id"].(float64))
 	key = app["tokenKey"].(string)
+	t.Run("ApplicationRecordNumbersAndIsolation", func(t *testing.T) {
+		testApplicationRecordAPIs(t, wrapper, adminToken)
+	})
 	t.Run("OrdinaryAdminOperationsAndConfigurationBoundary", func(t *testing.T) {
 		created := ok(request("POST", "/api/admin/admin", map[string]any{"username": "operator1", "password": "test-pass-123", "role": "admin"}, adminToken, false)).(map[string]any)
 		id := created["id"].(float64)

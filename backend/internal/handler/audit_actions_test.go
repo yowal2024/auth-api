@@ -31,6 +31,35 @@ func TestRecentActivity(t *testing.T) {
 	}
 }
 
+func TestAuditApplicationOwnership(t *testing.T) {
+	for _, tc := range []struct {
+		route, path   string
+		created, want int64
+	}{
+		{"/api/private/user", "/api/private/user", 0, 1000},
+		{"/api/private/ver", "/api/private/ver", 0, 1000},
+		{"/api/private/app/:id", "/api/private/app/2000", 0, 2000},
+		{"/api/private/app/:id/mtls/gen-ca", "/api/private/app/2000/mtls/gen-ca", 0, 2000},
+		{"/api/private/app", "/api/private/app", 3000, 3000},
+		{"/api/private/app", "/api/private/app", 0, 0},
+		{"/api/private/system/settings", "/api/private/system/settings", 0, 0},
+		{"/api/private/admin", "/api/private/admin", 0, 0},
+		{"/api/private/me/profile", "/api/private/me/profile", 0, 0},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			g := gin.New()
+			g.POST(tc.route, func(c *gin.Context) {
+				c.Set("appid", int64(1000))
+				c.Set("audit.appid", tc.created)
+				if got := auditAppID(c); got != tc.want {
+					t.Fatalf("owner = %d, want %d", got, tc.want)
+				}
+			})
+			g.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", tc.path, nil))
+		})
+	}
+}
+
 type auditResultMatcher struct {
 	code    int
 	success bool
@@ -61,7 +90,7 @@ func TestAuditUsesBusinessOutcomeWithoutSavingSecrets(t *testing.T) {
 		}
 		d := sqlx.NewDb(raw, "sqlmock")
 		mock.ExpectQuery("SELECT admin_log_enabled").WillReturnRows(sqlmock.NewRows([]string{"enabled"}).AddRow(1))
-		mock.ExpectExec("INSERT INTO .*logs").WithArgs("试运行了云函数", auditResultMatcher{tc.code, tc.code == 0 && !tc.scriptFailed}, "0", "admin", int64(1), sqlmock.AnyArg(), "admin", "", "", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec("INSERT INTO .*logs").WithArgs(int64(0), "试运行了云函数", auditResultMatcher{tc.code, tc.code == 0 && !tc.scriptFailed}, "0", "admin", int64(1), sqlmock.AnyArg(), "admin", "", "", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1, 1))
 		g := gin.New()
 		g.Use(func(c *gin.Context) { c.Set("admin", &auth.Session{AdminID: 1, Username: "admin"}); c.Next() }, AdminAudit(d))
 		g.POST("/api/private/function/:id/run", func(c *gin.Context) {

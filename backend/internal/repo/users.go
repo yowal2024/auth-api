@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const userSelect = `SELECT (COALESCE(OCTET_LENGTH(u.sign_pk8),0)>0 AND COALESCE(OCTET_LENGTH(u.sign_x509),0)>0) AS has_sign_key,u.id,u.appid,u.group_id,u.username,u.password,u.nickname,u.avatar,u.vip,u.mi,u.region,u.register_ip,u.last_ip,u.last_region,u.last_login_time,u.last_active_time,u.bind_limit,u.region_limit,COALESCE(u.ip_list,'') AS ip_list,u.ban_expire,u.create_time,COALESCE(g.name,'') AS group_name,COALESCE(g.level,0) AS group_level FROM {users} u LEFT JOIN {user_groups} g ON g.id=u.group_id`
+var userSelect = "SELECT " + AppRecordIDColumn("users", "u") + `(COALESCE(OCTET_LENGTH(u.sign_pk8),0)>0 AND COALESCE(OCTET_LENGTH(u.sign_x509),0)>0) AS has_sign_key,u.id,u.appid,u.group_id,u.username,u.password,u.nickname,u.avatar,u.vip,u.mi,u.region,u.register_ip,u.last_ip,u.last_region,u.last_login_time,u.last_active_time,u.bind_limit,u.region_limit,COALESCE(u.ip_list,'') AS ip_list,u.ban_expire,u.create_time,COALESCE(g.name,'') AS group_name,COALESCE(g.level,0) AS group_level FROM {users} u LEFT JOIN {user_groups} g ON g.id=u.group_id`
 
 func NewUserRepo(d *sqlx.DB) *UserRepo { return &UserRepo{d} }
 
@@ -41,6 +41,7 @@ func (r *UserRepo) List(ctx context.Context, a int64, f UserFilter) ([]User, int
 	}
 	if f.Keyword != "" {
 		allowed := map[string]string{"username": "u.username", "nickname": "u.nickname", "mi": "u.mi", "id": "u.id", "ip": "u.last_ip", "lastIp": "u.last_ip"}
+		allowed["appRecordId"] = AppRecordIDExpr("users", "u")
 		col := allowed[f.Field]
 		if col == "" {
 			col = "u.username"
@@ -102,6 +103,9 @@ func (r *UserRepo) CreateWith(ctx context.Context, v *User, initialize func(*sql
 	}
 	id, e := result.LastInsertId()
 	if e != nil {
+		return 0, e
+	}
+	if e = AssignAppRecordIDs(ctx, tx, v.AppID, "users", []int64{id}); e != nil {
 		return 0, e
 	}
 	v.ID = id

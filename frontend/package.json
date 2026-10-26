@@ -11,6 +11,7 @@
     "test": "node scripts/smoke.mjs",
     "test:sdk-docs": "node scripts/sdk-docs-regression.mjs",
     "test:regression": "node scripts/regression.mjs",
+    "test:app-scope": "node scripts/app-scope-regression.mjs",
     "test:forms": "node scripts/forms-regression.mjs",
     "test:user-details": "node scripts/user-details-live.mjs",
     "test:settings": "node scripts/settings-regression.mjs",

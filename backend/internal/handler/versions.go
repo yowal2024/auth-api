@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-const versionSelect = "SELECT id,appid,version_name,version_key,version_no,status,url,apk_name,apk_size,apk_url,is_canonical,canonical_path,clone_diff_enable,original_package,COALESCE(changelog,'') AS changelog,create_time FROM {versions}"
+var versionSelect = "SELECT " + repo.AppRecordIDColumn("versions", "{versions}") + "id,appid,version_name,version_key,version_no,status,url,apk_name,apk_size,apk_url,is_canonical,canonical_path,clone_diff_enable,original_package,COALESCE(changelog,'') AS changelog,create_time FROM {versions}"
 
 type VersionService struct {
 	Config config.CloneConfig
@@ -82,7 +82,7 @@ func (v *VersionService) Mount(g *gin.RouterGroup) {
 		} else {
 			args = append([]any{a}, args...)
 			args = append(args, time.Now().Unix())
-			res, e := v.DB.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {versions} (appid,version_name,version_key,version_no,status,url,apk_name,apk_size,apk_url,is_canonical,canonical_path,clone_diff_enable,original_package,changelog,create_time) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"), args...)
+			res, e := repo.ExecAppInsert(c.Request.Context(), v.DB, a, "versions", repo.SQL("INSERT INTO {versions} (appid,version_name,version_key,version_no,status,url,apk_name,apk_size,apk_url,is_canonical,canonical_path,clone_diff_enable,original_package,changelog,create_time) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"), args...)
 			if dbError(c, e) {
 				return
 			}

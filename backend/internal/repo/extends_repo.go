@@ -12,7 +12,7 @@ func NewExtendRepo(db *sqlx.DB) *ExtendRepo { return &ExtendRepo{db: db} }
 
 func (r *ExtendRepo) GetByID(ctx context.Context, appid, id int64) (*Extend, error) {
 	var v Extend
-	e := r.db.GetContext(ctx, &v, SQL("SELECT id, appid, e_key, e_value, remark, update_time FROM {extends} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
+	e := r.db.GetContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("extends", "{extends}")+"id, appid, e_key, e_value, remark, update_time FROM {extends} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
 	if errors.Is(e, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -21,12 +21,12 @@ func (r *ExtendRepo) GetByID(ctx context.Context, appid, id int64) (*Extend, err
 
 func (r *ExtendRepo) ListByApp(ctx context.Context, appid int64) ([]Extend, error) {
 	v := []Extend{}
-	e := r.db.SelectContext(ctx, &v, SQL("SELECT id, appid, e_key, e_value, remark, update_time FROM {extends} WHERE appid = ? ORDER BY update_time DESC,id DESC"), appid)
+	e := r.db.SelectContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("extends", "{extends}")+"id, appid, e_key, e_value, remark, update_time FROM {extends} WHERE appid = ? ORDER BY update_time DESC,id DESC"), appid)
 	return v, e
 }
 
 func (r *ExtendRepo) Create(ctx context.Context, v *Extend) (int64, error) {
-	res, e := r.db.ExecContext(ctx, SQL("INSERT INTO {extends} (appid, e_key, e_value, remark, update_time)\n\t\t VALUES (?,?,?,?,?)"), v.AppID, v.Key, v.Value, v.Remark, v.UpdateTime)
+	res, e := ExecAppInsert(ctx, r.db, v.AppID, "extends", SQL("INSERT INTO {extends} (appid, e_key, e_value, remark, update_time)\n\t\t VALUES (?,?,?,?,?)"), v.AppID, v.Key, v.Value, v.Remark, v.UpdateTime)
 	if e != nil {
 		return 0, e
 	}

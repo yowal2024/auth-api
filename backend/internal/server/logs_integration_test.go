@@ -45,6 +45,38 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 		}
 		return v
 	}
+	t.Run("AdminListActionsAndDeletionStayInApp", func(t *testing.T) {
+		defer func() { *appID = original }()
+		own := execID("INSERT INTO {logs} (appid,type,action,create_time) VALUES (?,'admin','scope-own-admin',100)", original)
+		other := execID("INSERT INTO {logs} (appid,type,action,create_time) VALUES (?,'admin','scope-foreign-admin',100)", foreignID)
+		global := execID("INSERT INTO {logs} (type,action,create_time) VALUES ('admin','scope-global-admin',100)")
+		defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id IN (?,?,?)"), own, other, global)
+		for _, scope := range []struct{ app, id int64 }{{original, own}, {foreignID, other}, {0, global}} {
+			*appID = scope.app
+			result := ok("GET", "/log/list?category=admin&keyword=scope-", nil)["data"].(map[string]any)
+			rows := result["list"].([]any)
+			if len(rows) != 1 || rows[0].(map[string]any)["id"] != float64(scope.id) {
+				t.Fatalf("wrong administrator log scope %d: %v", scope.app, rows)
+			}
+		}
+		*appID = original
+		for _, action := range ok("GET", "/log/actions?category=admin", nil)["data"].([]any) {
+			if action == "scope-foreign-admin" || action == "scope-global-admin" {
+				t.Fatal("unrelated administrator log category exposed", action)
+			}
+		}
+		result := ok("POST", "/log/clear", map[string]any{"category": "admin", "ids": []int64{own, other, global}})
+		if result["data"].(map[string]any)["affected"] != float64(1) {
+			t.Fatal("selected administrator deletion escaped its application", result)
+		}
+		own = execID("INSERT INTO {logs} (appid,type,action,create_time) VALUES (?,'admin','scope-own-admin',100)", original)
+		defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), own)
+		ok("POST", "/log/clear", map[string]any{"category": "admin", "before": 101})
+		var remaining []int64
+		if err := d.Select(&remaining, repo.SQL("SELECT id FROM {logs} WHERE id IN (?,?,?) ORDER BY id"), own, other, global); err != nil || len(remaining) != 2 || remaining[0] != other || remaining[1] != global {
+			t.Fatalf("bulk administrator cleanup removed unrelated logs: %v %v", remaining, err)
+		}
+	})
 	t.Run("AuditOutcomeAndAccountValidation", func(t *testing.T) {
 		for _, tc := range []struct {
 			path string
@@ -70,7 +102,7 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 		if json.Unmarshal([]byte(row.Data), &outcome) != nil || outcome.Code != 400 || outcome.Success || outcome.HTTPStatus != 200 || row.Action != "修改了卡密" {
 			t.Fatalf("wrong failure audit: %+v %+v", row, outcome)
 		}
-		probe := execID("INSERT INTO {logs} (type,action,operator,username,create_time) VALUES ('admin','保存了公告','audit-operator-search','audit-operator-search',1)")
+		probe := execID("INSERT INTO {logs} (appid,type,action,operator,username,create_time) VALUES (?,'admin','保存了公告','audit-operator-search','audit-operator-search',1)", original)
 		defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), probe)
 		if got := ok("GET", "/log/list?category=admin&keyword=audit-operator-search", nil)["data"].(map[string]any)["total"]; got != float64(1) {
 			t.Fatal("operator search failed", got)
@@ -87,7 +119,7 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 		}
 	}
 	for _, kind := range []string{"system", "admin"} {
-		id := execID("INSERT INTO {logs} (type,action,create_time) VALUES (?, 'scope-log-type', 100)", kind)
+		id := execID("INSERT INTO {logs} (appid,type,action,create_time) VALUES (?, ?, 'scope-log-type', 100)", original, kind)
 		defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), id)
 	}
 	for _, kind := range []string{"system", "admin"} {
@@ -169,14 +201,16 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 			}
 		}
 	})
-	t.Run("DashboardRecentMergesAdminAndScopedUsers", func(t *testing.T) {
+	t.Run("DashboardRecentScopesBothAdminAndUsers", func(t *testing.T) {
 		base := time.Now().Add(time.Hour).Unix()
 		for i := 0; i < 10; i++ {
 			operator := "dashboard-admin"
 			if i == 0 {
 				operator = ""
 			}
-			id := execID("INSERT INTO {logs} (type,action,operator,create_time) VALUES ('admin',?,?,?)", fmt.Sprintf("dashboard-action-%d", i), operator, base-int64(i))
+			id := execID("INSERT INTO {logs} (appid,type,action,operator,create_time) VALUES (?,'admin',?,?,?)", original, fmt.Sprintf("dashboard-action-%d", i), operator, base-int64(i))
+			globalID := execID("INSERT INTO {logs} (type,action,operator,create_time) VALUES ('admin',?,?,?)", fmt.Sprintf("dashboard-global-action-%d", i), operator, base-int64(i))
+			defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), globalID)
 			defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), id)
 		}
 		system := execID("INSERT INTO {logs} (type,action,create_time) VALUES ('system','dashboard-system-secret',?)", base+10)
@@ -185,16 +219,18 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 		cardLog := execID("INSERT INTO {user_logs} (uid,action,create_time) VALUES (?,'dashboard-card',?)", -k, base+2)
 		foreignLog := execID("INSERT INTO {user_logs} (uid,action,create_time) VALUES (?,'dashboard-foreign',?)", f, base+4)
 		defer d.Exec(repo.SQL("DELETE FROM {user_logs} WHERE id IN (?,?,?)"), userLog, cardLog, foreignLog)
+		foreignAdmin := execID("INSERT INTO {logs} (appid,type,action,create_time) VALUES (?,'admin','dashboard-foreign-admin',?)", foreignID, base+9)
+		defer d.Exec(repo.SQL("DELETE FROM {logs} WHERE id=?"), foreignAdmin)
 		getRecent := func() []any { return ok("GET", "/dashboard", nil)["data"].(map[string]any)["recent"].([]any) }
-		// No selected app has no user events, but admin activity must still appear.
+		// No selected application sees only global administrator events.
 		*appID = 0
 		rows := getRecent()
-		if len(rows) != 8 || rows[0].(map[string]any)["text"] != "管理员 · dashboard-action-0" {
+		if len(rows) != 8 || rows[0].(map[string]any)["text"] != "管理员 · dashboard-global-action-0" {
 			t.Fatalf("admin-only recent missing or not newest first: %v", rows)
 		}
 		for i, row := range rows {
 			v := row.(map[string]any)
-			if v["type"] != "success" || !strings.HasSuffix(v["text"].(string), fmt.Sprintf("dashboard-action-%d", i)) {
+			if v["type"] != "success" || !strings.HasSuffix(v["text"].(string), fmt.Sprintf("dashboard-global-action-%d", i)) {
 				t.Fatalf("wrong admin ordering or timeline type: %v", rows)
 			}
 		}
@@ -208,7 +244,7 @@ func testLogScope(t *testing.T, d *sqlx.DB, appID *int64, foreignID int64, token
 		}
 		for _, row := range rows {
 			text := row.(map[string]any)["text"].(string)
-			if strings.Contains(text, "dashboard-foreign") || strings.Contains(text, "dashboard-system") {
+			if strings.Contains(text, "dashboard-foreign") || strings.Contains(text, "dashboard-system") || strings.Contains(text, "dashboard-global") {
 				t.Fatal("unrelated log exposed", rows)
 			}
 		}

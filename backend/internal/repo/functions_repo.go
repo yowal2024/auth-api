@@ -12,7 +12,7 @@ func NewFunctionRepo(db *sqlx.DB) *FunctionRepo { return &FunctionRepo{db: db} }
 
 func (r *FunctionRepo) GetByID(ctx context.Context, appid, id int64) (*Function, error) {
 	var v Function
-	e := r.db.GetContext(ctx, &v, SQL("SELECT id, appid, name, `trigger`, code, remark, timeout, enabled, last_run FROM {functions} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
+	e := r.db.GetContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("functions", "{functions}")+"id, appid, name, `trigger`, code, remark, timeout, enabled, last_run FROM {functions} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
 	if errors.Is(e, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -21,12 +21,12 @@ func (r *FunctionRepo) GetByID(ctx context.Context, appid, id int64) (*Function,
 
 func (r *FunctionRepo) ListByApp(ctx context.Context, appid int64) ([]Function, error) {
 	v := []Function{}
-	e := r.db.SelectContext(ctx, &v, SQL("SELECT id, appid, name, `trigger`, code, remark, timeout, enabled, last_run FROM {functions} WHERE appid = ? ORDER BY id DESC"), appid)
+	e := r.db.SelectContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("functions", "{functions}")+"id, appid, name, `trigger`, code, remark, timeout, enabled, last_run FROM {functions} WHERE appid = ? ORDER BY id DESC"), appid)
 	return v, e
 }
 
 func (r *FunctionRepo) Create(ctx context.Context, v *Function) (int64, error) {
-	res, e := r.db.ExecContext(ctx, SQL("INSERT INTO {functions} (appid, name, `trigger`, code, remark, timeout, enabled, last_run) VALUES (?,?,?,?,?,?,?,?)"), v.AppID, v.Name, v.Trigger, v.Code, v.Remark, v.Timeout, v.Enabled, v.LastRun)
+	res, e := ExecAppInsert(ctx, r.db, v.AppID, "functions", SQL("INSERT INTO {functions} (appid, name, `trigger`, code, remark, timeout, enabled, last_run) VALUES (?,?,?,?,?,?,?,?)"), v.AppID, v.Name, v.Trigger, v.Code, v.Remark, v.Timeout, v.Enabled, v.LastRun)
 	if e != nil {
 		return 0, e
 	}

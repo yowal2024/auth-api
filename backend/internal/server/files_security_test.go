@@ -80,6 +80,22 @@ func testFileDownloads(t *testing.T, db *sqlx.DB, cfg *config.Config, handler ht
 		code(request(method, fmt.Sprintf("/api/admin/extend-file/%d", id), app+999999, `{"name":"foreign"}`, nil), 404)
 	}
 	code(request("GET", admin, app+999999, "", nil), 404)
+	// Legacy unassigned files must not appear in every selected application.
+	exec("UPDATE {extend_files} SET appid=0,category='unassigned-legacy' WHERE id=?", id)
+	for _, url := range []string{sdk, admin} {
+		code(request("GET", url, app, "", nil), 404)
+	}
+	for _, url := range []string{"/api/admin/extend-file/list?category=unassigned-legacy", "/api/admin/extend-file/categories", "/api/sdk/extend-file/list?category=unassigned-legacy"} {
+		w := request("GET", url, app, "", nil)
+		code(w, 0)
+		if strings.Contains(w.Body.String(), "unassigned-legacy") || strings.Contains(w.Body.String(), name) {
+			t.Fatalf("legacy global file leaked into application: %s", w.Body.String())
+		}
+	}
+	if w := request("GET", public, app, "", nil); w.Code != 200 || !bytes.Equal(w.Body.Bytes(), content) {
+		t.Fatal("legacy public download changed", w.Code)
+	}
+	exec("UPDATE {extend_files} SET appid=?,category='' WHERE id=?", app, id)
 	exec("UPDATE {apps} SET status=0 WHERE id=?", app)
 	if request("GET", public, app, "", nil).Code != 404 {
 		t.Fatal("disabled app public file still available")

@@ -12,7 +12,7 @@ func NewEncryptRepo(db *sqlx.DB) *EncryptRepo { return &EncryptRepo{db: db} }
 
 func (r *EncryptRepo) GetByID(ctx context.Context, appid, id int64) (*Encrypt, error) {
 	var v Encrypt
-	e := r.db.GetContext(ctx, &v, SQL("SELECT id, appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\tCOALESCE(client_private_key, '') AS client_private_key,\n\tCOALESCE(client_public_key, '')  AS client_public_key,\n\tCOALESCE(server_private_key, '') AS server_private_key,\n\tCOALESCE(server_public_key, '')  AS server_public_key,\n\tcreate_time FROM {encrypts} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
+	e := r.db.GetContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("encrypts", "{encrypts}")+"id, appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\tCOALESCE(client_private_key, '') AS client_private_key,\n\tCOALESCE(client_public_key, '')  AS client_public_key,\n\tCOALESCE(server_private_key, '') AS server_private_key,\n\tCOALESCE(server_public_key, '')  AS server_public_key,\n\tcreate_time FROM {encrypts} WHERE appid = ? AND id = ? LIMIT 1"), appid, id)
 	if errors.Is(e, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -21,12 +21,12 @@ func (r *EncryptRepo) GetByID(ctx context.Context, appid, id int64) (*Encrypt, e
 
 func (r *EncryptRepo) ListByApp(ctx context.Context, appid int64) ([]Encrypt, error) {
 	v := []Encrypt{}
-	e := r.db.SelectContext(ctx, &v, SQL("SELECT id, appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\tCOALESCE(client_private_key, '') AS client_private_key,\n\tCOALESCE(client_public_key, '')  AS client_public_key,\n\tCOALESCE(server_private_key, '') AS server_private_key,\n\tCOALESCE(server_public_key, '')  AS server_public_key,\n\tcreate_time FROM {encrypts} WHERE appid = ? ORDER BY id DESC"), appid)
+	e := r.db.SelectContext(ctx, &v, SQL("SELECT "+AppRecordIDColumn("encrypts", "{encrypts}")+"id, appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\tCOALESCE(client_private_key, '') AS client_private_key,\n\tCOALESCE(client_public_key, '')  AS client_public_key,\n\tCOALESCE(server_private_key, '') AS server_private_key,\n\tCOALESCE(server_public_key, '')  AS server_public_key,\n\tcreate_time FROM {encrypts} WHERE appid = ? ORDER BY id DESC"), appid)
 	return v, e
 }
 
 func (r *EncryptRepo) Create(ctx context.Context, v *Encrypt) (int64, error) {
-	res, e := r.db.ExecContext(ctx, SQL("INSERT INTO {encrypts}\n\t\t (appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\t\t  client_private_key, client_public_key, server_private_key, server_public_key, create_time)\n\t\t VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"), v.AppID, v.Name, v.Algorithm, v.Encoding, v.SymKey, v.TimeSkew, v.SignMode, v.ClientPrivateKey, v.ClientPublicKey, v.ServerPrivateKey, v.ServerPublicKey, v.CreateTime)
+	res, e := ExecAppInsert(ctx, r.db, v.AppID, "encrypts", SQL("INSERT INTO {encrypts}\n\t\t (appid, name, algorithm, encoding, sym_key, time_skew, sign_mode,\n\t\t  client_private_key, client_public_key, server_private_key, server_public_key, create_time)\n\t\t VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"), v.AppID, v.Name, v.Algorithm, v.Encoding, v.SymKey, v.TimeSkew, v.SignMode, v.ClientPrivateKey, v.ClientPublicKey, v.ServerPrivateKey, v.ServerPublicKey, v.CreateTime)
 	if e != nil {
 		return 0, e
 	}

@@ -41,8 +41,8 @@ func TestAllRecoveredMigrationsParse(t *testing.T) {
 		}
 		n++
 	}
-	if n != 44 {
-		t.Fatalf("want 44 migrations, got %d", n)
+	if n != 46 {
+		t.Fatalf("want 46 migrations, got %d", n)
 	}
 }
 func TestWriteConfigRoundTrip(t *testing.T) {

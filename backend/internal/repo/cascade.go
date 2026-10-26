@@ -16,7 +16,7 @@ func (r *AppRepo) Delete(ctx context.Context, id int64) error {
 			return e
 		}
 	}
-	for _, table := range []string{"users", "user_groups", "kami_groups", "kamis", "notices", "extends", "extend_files", "versions", "blocks", "functions", "encrypts"} {
+	for _, table := range []string{"users", "user_groups", "kami_groups", "kamis", "notices", "extends", "extend_files", "versions", "blocks", "functions", "encrypts", "app_record_ids", "app_record_counters"} {
 		if _, e = tx.ExecContext(ctx, SQL("DELETE FROM {"+table+"} WHERE appid=?"), id); e != nil {
 			return e
 		}

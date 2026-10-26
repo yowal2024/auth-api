@@ -28,7 +28,8 @@ client.interceptors.request.use((config) => {
   const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   const appId = getCurrentAppId();
-  if (appId) config.headers["X-App-Id"] = appId;
+  if (config.headers["X-App-Id"] == null)
+    config.headers["X-App-Id"] = appId;
   if (config.url) config.url = rewriteAdminPath(config.url);
   return config;
 });
@@ -110,4 +111,9 @@ client.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-export const request = (url, options = {}) => client({ url, ...options });
+export const request = (url, options = {}) =>
+  client({
+    url,
+    ...options,
+    headers: { "X-App-Id": getCurrentAppId(), ...options.headers },
+  });

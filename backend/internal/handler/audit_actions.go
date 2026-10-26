@@ -2,8 +2,31 @@ package handler
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
+
+func auditAppID(c *gin.Context) int64 {
+	parts := strings.SplitN(strings.TrimPrefix(c.FullPath(), "/"), "/", 3)
+	if len(parts) != 3 || parts[0] != "api" {
+		return 0
+	}
+	family, _, _ := strings.Cut(parts[2], "/")
+	switch family {
+	case "app":
+		if id := c.GetInt64("audit.appid"); id > 0 {
+			return id
+		}
+		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+		return max(id, 0)
+	case "user", "kami", "notice", "extend", "extend-file", "block", "encrypt", "function", "ver", "log":
+		return max(c.GetInt64("appid"), 0)
+	default:
+		return 0
+	}
+}
 
 // Route patterns, not concrete URLs: supports custom administrator entry names
 // and old audit rows without storing request bodies or credentials.

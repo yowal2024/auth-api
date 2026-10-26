@@ -99,6 +99,9 @@ func (r *AppRepo) CreateInherited(ctx context.Context, v *App, source int64) (in
 	if err != nil {
 		return 0, err
 	}
+	if err = AssignAppRecordIDs(ctx, tx, id, "encrypts", []int64{encryption}); err != nil {
+		return 0, err
+	}
 	if _, err = tx.ExecContext(ctx, SQL("UPDATE {apps} SET encryption=? WHERE id=?"), encryption, id); err != nil {
 		return 0, err
 	}

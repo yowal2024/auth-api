@@ -113,9 +113,9 @@ export default {
     }));
     const tableColumns = [
       {
-        title: "ID",
-        dataIndex: "id",
-        width: 70,
+        title: "应用内编号",
+        dataIndex: "appRecordId",
+        width: 110,
       },
       {
         title: "分组名称",

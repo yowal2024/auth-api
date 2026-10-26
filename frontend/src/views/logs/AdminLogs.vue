@@ -149,7 +149,7 @@ export default {
           :content="
             c.length
               ? `确定清理选中的 ${c.length} 条日志?`
-              : '确定清理全部管理员日志?'
+              : '确定清理当前应用的全部管理员日志?'
           "
           @ok="handleClearLogs"
         >

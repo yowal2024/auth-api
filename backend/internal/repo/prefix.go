@@ -8,7 +8,7 @@ import (
 )
 
 var prefix atomic.Pointer[strings.Replacer]
-var tableNames = []string{"admins", "apps", "users", "user_extends", "user_devices", "user_logs", "notices", "extends", "versions", "blocks", "kami_groups", "kamis", "functions", "encrypts", "logs", "settings", "api_routes", "api_codes", "user_groups", "ip_info", "extend_files", "security_events", "backup_settings", "backup_runs"}
+var tableNames = []string{"admins", "apps", "users", "user_extends", "user_devices", "user_logs", "notices", "extends", "versions", "blocks", "kami_groups", "kamis", "functions", "encrypts", "logs", "settings", "api_routes", "api_codes", "user_groups", "ip_info", "extend_files", "security_events", "backup_settings", "backup_runs", "app_record_ids", "app_record_counters"}
 
 func ValidatePrefix(p string) error {
 	if !regexp.MustCompile(`^[a-zA-Z0-9_]{0,32}$`).MatchString(p) {

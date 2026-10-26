@@ -216,7 +216,7 @@ def main():
             redis = {"addr": f"127.0.0.1:{redis_port}", "db": 0, "password": ""}
             request(plain, "/api/install/save-config", {"mysql": mysql, "redis": redis})
             migrated = request(plain, "/api/install/migrate", {})
-            assert len(migrated["applied"]) == 44
+            assert len(migrated["applied"]) == 46
             admin_password = "Test-" + uuid.uuid4().hex[:10]
             request(plain, "/api/install/create-admin",
                     {"username": "admin", "password": admin_password, "adminEntry": "admin"})
@@ -323,7 +323,8 @@ def main():
                 ALTER TABLE a_users DROP COLUMN last_active_time, MODIFY COLUMN ban_expire INT UNSIGNED NOT NULL DEFAULT 0;
                 ALTER TABLE a_kamis DROP COLUMN last_active_time, MODIFY COLUMN ban_expire INT UNSIGNED NOT NULL DEFAULT 0;
                 ALTER TABLE a_apps MODIFY COLUMN geo_provider VARCHAR(16) NOT NULL DEFAULT 'tencent';
-                DROP TABLE a_security_events, a_backup_settings, a_backup_runs;
+                ALTER TABLE a_logs DROP INDEX idx_logs_app_type_time, DROP COLUMN appid;
+                DROP TABLE a_security_events, a_backup_settings, a_backup_runs, a_app_record_ids, a_app_record_counters;
                 DELETE FROM a__migrations WHERE version >= '0042';
                 INSERT INTO a_apps (name, geo_provider, geo_key, bind_region) VALUES ('preserved-app', 'tencent', 'test-key', 1);
                 INSERT INTO a_users (username, password, vip, ban_expire, last_login_time, ip_list)
@@ -347,8 +348,8 @@ def main():
             service = start()
             assert service.ready(secure, context)["installed"] is True
             assert listen_ports(service.process) == [port]
-            assert "database migrations applied: [0042_signed_ban_expire.sql 0043_default_local_geo.sql 0044_security_backup_activity.sql]" in service.log.read_text()
-            assert sql("SELECT COUNT(*) FROM a__migrations WHERE applied_at>0") == "44"
+            assert "database migrations applied: [0042_signed_ban_expire.sql 0043_default_local_geo.sql 0044_security_backup_activity.sql 0045_admin_log_app_scope.sql 0046_app_record_ids.sql]" in service.log.read_text()
+            assert sql("SELECT COUNT(*) FROM a__migrations WHERE applied_at>0") == "46"
             assert sql("SELECT version, applied_at FROM a__migrations WHERE version<'0042' ORDER BY version") == journal_before
             assert existing_data() == data_before
             assert sql("SELECT last_active_time FROM a_users WHERE username='preserved-user'") == "1700000000"
@@ -395,7 +396,7 @@ def main():
             assert redis_command("EXISTS", "sess:" + upgraded_token) == "0"
             assert redis_command("EXISTS", "sess:" + legacy_admin_token) == "0"
             service.stop()
-            passed("-port startup upgrades v0041 to v0044 while preserving existing accounts, cards, settings and TLS")
+            passed("-port startup upgrades v0041 to v0046 while preserving existing accounts, cards, settings and TLS")
             passed("previous set indexes become one string token; all older sessions are revoked")
 
             # A replay of 0044 would reset activity values; retain sentinels across another startup.

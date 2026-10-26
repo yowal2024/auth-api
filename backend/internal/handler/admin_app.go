@@ -148,6 +148,7 @@ func (h *AdminAppHandler) Create(c *gin.Context) {
 	id, e := h.apps.CreateInherited(c.Request.Context(), &v, r.InheritFrom)
 	if !dbError(c, e) {
 		v.ID = id
+		c.Set("audit.appid", id)
 		response.OK(c, v)
 	}
 }

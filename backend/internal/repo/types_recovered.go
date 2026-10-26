@@ -70,16 +70,18 @@ type AppCA struct {
 
 // Recovered from runtime type 0x134a880; original size 72 bytes.
 type Block struct {
-	ID         int64  `db:"id"          json:"id"`
-	AppID      int64  `db:"appid"       json:"appid"`
-	Type       string `db:"type"        json:"type"`
-	Value      string `db:"value"       json:"value"`
-	Reason     string `db:"reason"      json:"reason"`
-	CreateTime int64  `db:"create_time" json:"createTime"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"          json:"id"`
+	AppID       int64  `db:"appid"       json:"appid"`
+	Type        string `db:"type"        json:"type"`
+	Value       string `db:"value"       json:"value"`
+	Reason      string `db:"reason"      json:"reason"`
+	CreateTime  int64  `db:"create_time" json:"createTime"`
 }
 
 // Recovered from runtime type 0x1380740; original size 176 bytes.
 type Encrypt struct {
+	AppRecordID      int64  `db:"app_record_id" json:"appRecordId,omitempty"`
 	ID               int64  `db:"id"                  json:"id"`
 	AppID            int64  `db:"appid"               json:"appid"`
 	Name             string `db:"name"                json:"name"`
@@ -97,16 +99,18 @@ type Encrypt struct {
 
 // Recovered from runtime type 0x134a980; original size 72 bytes.
 type Extend struct {
-	ID         int64  `db:"id"          json:"id"`
-	AppID      int64  `db:"appid"       json:"appid"`
-	Key        string `db:"e_key"       json:"key"`
-	Value      string `db:"e_value"     json:"value"`
-	Remark     string `db:"remark"      json:"remark"`
-	UpdateTime int64  `db:"update_time" json:"updateTime"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"          json:"id"`
+	AppID       int64  `db:"appid"       json:"appid"`
+	Key         string `db:"e_key"       json:"key"`
+	Value       string `db:"e_value"     json:"value"`
+	Remark      string `db:"remark"      json:"remark"`
+	UpdateTime  int64  `db:"update_time" json:"updateTime"`
 }
 
 // Recovered from runtime type 0x1385d80; original size 176 bytes.
 type ExtendFile struct {
+	AppRecordID   int64  `db:"app_record_id" json:"appRecordId,omitempty"`
 	ID            int64  `db:"id"             json:"id"`
 	AppID         int64  `db:"appid"          json:"appid"`
 	Name          string `db:"name"           json:"name"`
@@ -125,19 +129,21 @@ type ExtendFile struct {
 
 // Recovered from runtime type 0x1366060; original size 104 bytes.
 type Function struct {
-	ID      int64  `db:"id"       json:"id"`
-	AppID   int64  `db:"appid"    json:"appid"`
-	Name    string `db:"name"     json:"name"`
-	Trigger string `db:"trigger"  json:"trigger"`
-	Code    string `db:"code"     json:"code"`
-	Remark  string `db:"remark"   json:"remark"`
-	Timeout int    `db:"timeout"  json:"timeout"`
-	Enabled int    `db:"enabled"  json:"enabled"`
-	LastRun int64  `db:"last_run" json:"lastRun"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"       json:"id"`
+	AppID       int64  `db:"appid"    json:"appid"`
+	Name        string `db:"name"     json:"name"`
+	Trigger     string `db:"trigger"  json:"trigger"`
+	Code        string `db:"code"     json:"code"`
+	Remark      string `db:"remark"   json:"remark"`
+	Timeout     int    `db:"timeout"  json:"timeout"`
+	Enabled     int    `db:"enabled"  json:"enabled"`
+	LastRun     int64  `db:"last_run" json:"lastRun"`
 }
 
 // Recovered from runtime type 0x1398b40; original size 264 bytes.
 type Kami struct {
+	AppRecordID    int64  `db:"app_record_id" json:"appRecordId,omitempty"`
 	ID             int64  `db:"id"          json:"id"`
 	AppID          int64  `db:"appid"       json:"appid"`
 	GroupID        int64  `db:"group_id"    json:"groupId"`
@@ -165,16 +171,18 @@ type Kami struct {
 
 // Recovered from runtime type 0x134aa80; original size 72 bytes.
 type KamiGroup struct {
-	ID     int64  `db:"id"     json:"id"`
-	AppID  int64  `db:"appid"  json:"appid"`
-	Name   string `db:"name"   json:"name"`
-	Type   string `db:"type"   json:"type"`
-	Value  int64  `db:"value"  json:"value"`
-	Remark string `db:"remark" json:"remark"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"     json:"id"`
+	AppID       int64  `db:"appid"  json:"appid"`
+	Name        string `db:"name"   json:"name"`
+	Type        string `db:"type"   json:"type"`
+	Value       int64  `db:"value"  json:"value"`
+	Remark      string `db:"remark" json:"remark"`
 }
 
 // Recovered from runtime type 0x13808e0; original size 184 bytes.
 type Log struct {
+	AppID      int64  `db:"appid" json:"appid"`
 	Summary    string `db:"-" json:"summary,omitempty"`
 	ID         int64  `db:"id"          json:"id"`
 	Type       string `db:"type"        json:"type"`
@@ -193,15 +201,16 @@ type Log struct {
 
 // Recovered from runtime type 0x13661a0; original size 96 bytes.
 type Notice struct {
-	ID         int64  `db:"id"          json:"id"`
-	AppID      int64  `db:"appid"       json:"appid"`
-	Title      string `db:"title"       json:"title"`
-	Content    string `db:"content"     json:"content"`
-	Enabled    int    `db:"enabled"     json:"enabled"`
-	AdminID    int64  `db:"admin_id"    json:"adminId"`
-	Author     string `db:"author"      json:"author"`
-	Views      int64  `db:"views"       json:"views"`
-	UpdateTime int64  `db:"update_time" json:"updateTime"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"          json:"id"`
+	AppID       int64  `db:"appid"       json:"appid"`
+	Title       string `db:"title"       json:"title"`
+	Content     string `db:"content"     json:"content"`
+	Enabled     int    `db:"enabled"     json:"enabled"`
+	AdminID     int64  `db:"admin_id"    json:"adminId"`
+	Author      string `db:"author"      json:"author"`
+	Views       int64  `db:"views"       json:"views"`
+	UpdateTime  int64  `db:"update_time" json:"updateTime"`
 }
 
 // Recovered from runtime type 0x130b640; original size 40 bytes.
@@ -213,6 +222,7 @@ type TrendBucket struct {
 
 // Recovered from runtime type 0x1396e80; original size 256 bytes.
 type User struct {
+	AppRecordID    int64  `db:"app_record_id" json:"appRecordId,omitempty"`
 	HasSignKey     bool   `db:"has_sign_key" json:"hasSignKey"`
 	ID             int64  `db:"id"               json:"id"`
 	AppID          int64  `db:"appid"            json:"appid"`
@@ -261,12 +271,13 @@ type UserExtend struct {
 
 // Recovered from runtime type 0x134ab80; original size 64 bytes.
 type UserGroup struct {
-	ID         int64  `db:"id"          json:"id"`
-	AppID      int64  `db:"appid"       json:"appid"`
-	Name       string `db:"name"        json:"name"`
-	Level      int    `db:"level"       json:"level"`
-	Remark     string `db:"remark"      json:"remark"`
-	CreateTime int64  `db:"create_time" json:"createTime"`
+	AppRecordID int64  `db:"app_record_id" json:"appRecordId,omitempty"`
+	ID          int64  `db:"id"          json:"id"`
+	AppID       int64  `db:"appid"       json:"appid"`
+	Name        string `db:"name"        json:"name"`
+	Level       int    `db:"level"       json:"level"`
+	Remark      string `db:"remark"      json:"remark"`
+	CreateTime  int64  `db:"create_time" json:"createTime"`
 }
 
 // Recovered from runtime type 0x13605e0; original size 104 bytes.
@@ -307,6 +318,7 @@ type UserLogWithUser struct {
 
 // Recovered from runtime type 0x138d7e0; original size 200 bytes.
 type Version struct {
+	AppRecordID     int64  `db:"app_record_id" json:"appRecordId,omitempty"`
 	ID              int64  `db:"id"                 json:"id"`
 	AppID           int64  `db:"appid"              json:"appid"`
 	VersionName     string `db:"version_name"       json:"versionName"`

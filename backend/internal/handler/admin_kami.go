@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const kamiSelect = "SELECT id,appid,group_id,group_name,card,status,use_user,use_time,remark,create_time,creator,create_ip,nickname,vip,ban_expire,bind_limit,region_limit,COALESCE(ip_list,'') AS ip_list,mi,region,last_ip,last_login_time,last_active_time FROM {kamis}"
+var kamiSelect = "SELECT " + repo.AppRecordIDColumn("kamis", "{kamis}") + "id,appid,group_id,group_name,card,status,use_user,use_time,remark,create_time,creator,create_ip,nickname,vip,ban_expire,bind_limit,region_limit,COALESCE(ip_list,'') AS ip_list,mi,region,last_ip,last_login_time,last_active_time FROM {kamis}"
 
 func randomCard(length int) (string, error) {
 	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -103,17 +103,26 @@ func MountKami(g *gin.RouterGroup, d *sqlx.DB, clients ...*redis.Client) {
 			return
 		}
 		cards := []string{}
+		recordIDs := make([]int64, 0, r.Count)
 		for i := 0; i < r.Count; i++ {
 			card, err := randomCard(r.Length)
 			if dbError(c, err) {
 				return
 			}
 			card = r.Prefix + card
-			_, e = tx.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {kamis} (appid,group_id,group_name,card,status,use_user,use_time,remark,create_time,creator,create_ip) VALUES (?,?,?,?,0,'',0,?,?,?,?)"), a, group.ID, group.Name, card, r.Remark, time.Now().Unix(), middleware.CurrentAdmin(c).Username, c.ClientIP())
+			result, e := tx.ExecContext(c.Request.Context(), repo.SQL("INSERT INTO {kamis} (appid,group_id,group_name,card,status,use_user,use_time,remark,create_time,creator,create_ip) VALUES (?,?,?,?,0,'',0,?,?,?,?)"), a, group.ID, group.Name, card, r.Remark, time.Now().Unix(), middleware.CurrentAdmin(c).Username, c.ClientIP())
 			if dbError(c, e) {
 				return
 			}
+			id, err := result.LastInsertId()
+			if dbError(c, err) {
+				return
+			}
+			recordIDs = append(recordIDs, id)
 			cards = append(cards, card)
+		}
+		if dbError(c, repo.AssignAppRecordIDs(c.Request.Context(), tx, a, "kamis", recordIDs)) {
+			return
 		}
 		if !dbError(c, tx.Commit()) {
 			response.OK(c, gin.H{"cards": cards, "count": len(cards)})
